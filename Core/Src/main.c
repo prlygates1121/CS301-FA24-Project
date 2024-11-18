@@ -90,13 +90,15 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   myMotorInit();
+  HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_TogglePin(BUZZER_GPIO_Port, BUZZER_Pin);
+	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 	  HAL_Delay(1000);
     /* USER CODE END WHILE */
 
