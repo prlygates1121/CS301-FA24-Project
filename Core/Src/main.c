@@ -24,7 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "myMotor.h"
-#include "servo.h"
+#include "utils.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -88,25 +88,23 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM3_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   myMotorInit();
   myCarBrake(0);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
-  HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+  TURN_OFF_BUZZER;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-	  SetJointAngle(90);
-	  HAL_Delay(500);
-	  SetJointAngle(0);
-	  HAL_Delay(500);
+	  if (IR_R_GROUND_WHITE || IR_L_GROUND_WHITE) {
+		  myCarRun(-50, 10);
+	  } else {
+		  myCarRun(50, 10);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

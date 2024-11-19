@@ -1,1 +1,0 @@
-void SetJointAngle(float angle);
