@@ -22,6 +22,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "utils.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,13 +52,13 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+float UT_distance;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
 
 /* USER CODE BEGIN EV */
-
+extern TIM_HandleTypeDef htim2;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -198,6 +199,34 @@ void SysTick_Handler(void)
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
 
-/* USER CODE BEGIN 1 */
+/**
+  * @brief This function handles EXTI line1 interrupt.
+  */
+void EXTI1_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI1_IRQn 0 */
 
+  /* USER CODE END EXTI1_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(UT_STATUS_Pin);
+  /* USER CODE BEGIN EXTI1_IRQn 1 */
+
+  /* USER CODE END EXTI1_IRQn 1 */
+}
+
+/* USER CODE BEGIN 1 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	HAL_Delay_us(10);
+	if (GPIO_Pin == UT_STATUS_Pin) {
+		// Set TIM2 counter to 0
+		__HAL_TIM_SET_COUNTER(&htim2, 0);
+		// Start counter
+		__HAL_TIM_ENABLE(&htim2);
+		// Waiting for ultrasonic pulses to be sent back
+		while (UT_NOT_RECEIVED);
+		// Stop counter
+		__HAL_TIM_DISABLE(&htim2);
+		// Get the elapsed time
+		UT_distance = __HAL_TIM_GET_COUNTER(&htim2) * 5 * 34 / 200.0;
+	}
+}
 /* USER CODE END 1 */

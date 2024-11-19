@@ -89,9 +89,12 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM5_Init();
+  MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   myMotorInit();
   myCarBrake(0);
+  HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   TURN_OFF_BUZZER;
   /* USER CODE END 2 */
@@ -100,11 +103,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if (IR_R_GROUND_WHITE || IR_L_GROUND_WHITE) {
-		  myCarRun(-50, 10);
+	  uint16_t distance = UT_get_distance();
+	  if (distance < 40 && distance > 5) {
+		  myCarRun(50, 0);
 	  } else {
-		  myCarRun(50, 10);
+		  myCarRun(-50, 0);
 	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

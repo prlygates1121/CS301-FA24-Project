@@ -59,6 +59,11 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define IR_GND_R_Pin GPIO_PIN_13
 #define IR_GND_R_GPIO_Port GPIOC
+#define UT_SEND_Pin GPIO_PIN_0
+#define UT_SEND_GPIO_Port GPIOC
+#define UT_STATUS_Pin GPIO_PIN_1
+#define UT_STATUS_GPIO_Port GPIOC
+#define UT_STATUS_EXTI_IRQn EXTI1_IRQn
 #define SERVO_Pin GPIO_PIN_0
 #define SERVO_GPIO_Port GPIOA
 #define LED1_Pin GPIO_PIN_0
