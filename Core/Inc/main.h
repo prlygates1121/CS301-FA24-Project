@@ -68,6 +68,14 @@ void Error_Handler(void);
 #define SERVO_GPIO_Port GPIOA
 #define LED1_Pin GPIO_PIN_0
 #define LED1_GPIO_Port GPIOB
+#define MOTOR_DIR_FRONT_L_Pin GPIO_PIN_12
+#define MOTOR_DIR_FRONT_L_GPIO_Port GPIOB
+#define MOTOR_DIR_REAR_L_Pin GPIO_PIN_13
+#define MOTOR_DIR_REAR_L_GPIO_Port GPIOB
+#define MOTOR_DIR_FRONT_R_Pin GPIO_PIN_14
+#define MOTOR_DIR_FRONT_R_GPIO_Port GPIOB
+#define MOTOR_DIR_REAR_R_Pin GPIO_PIN_15
+#define MOTOR_DIR_REAR_R_GPIO_Port GPIOB
 #define BUZZER_Pin GPIO_PIN_8
 #define BUZZER_GPIO_Port GPIOA
 #define IR_GND_L_Pin GPIO_PIN_11
@@ -78,6 +86,14 @@ void Error_Handler(void);
 #define IR_OBST_R_GPIO_Port GPIOB
 #define IR_OBST_L_Pin GPIO_PIN_5
 #define IR_OBST_L_GPIO_Port GPIOB
+#define MOTOR_PWM_FRONT_L_Pin GPIO_PIN_6
+#define MOTOR_PWM_FRONT_L_GPIO_Port GPIOB
+#define MOTOR_PWM_REAR_L_Pin GPIO_PIN_7
+#define MOTOR_PWM_REAR_L_GPIO_Port GPIOB
+#define MOTOR_PWM_FRONT_R_Pin GPIO_PIN_8
+#define MOTOR_PWM_FRONT_R_GPIO_Port GPIOB
+#define MOTOR_PWM_REAR_R_Pin GPIO_PIN_9
+#define MOTOR_PWM_REAR_R_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

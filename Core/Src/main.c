@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "myMotor.h"
+//#include "myMotor.h"
 #include "utils.h"
 /* USER CODE END Includes */
 
@@ -91,10 +91,14 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM2_Init();
   MX_TIM1_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  myMotorInit();
-  myCarBrake(0);
+//  myMotorInit();
   HAL_TIM_Base_Start(&htim1);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   TURN_OFF_BUZZER;
   /* USER CODE END 2 */
@@ -103,15 +107,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  uint16_t distance = UT_get_distance();
-	  if (distance < 40 && distance > 5) {
-		  myCarRun(50, 0);
-	  } else {
-		  myCarRun(-50, 0);
-	  }
-
     /* USER CODE END WHILE */
-
+	  myCarBrake(0);
+	  HAL_Delay(500);
+	  myCarRun(50, 0);
+	  HAL_Delay(500);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
