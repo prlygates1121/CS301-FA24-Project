@@ -109,14 +109,18 @@ int main(void)
   car_brake(0);
   NRF24L01_Init();
   // Check if NRF24L01 module is
-  while(NRF24L01_Check()) {
+  while (NRF24L01_Check()) {
 	  HAL_Delay(400);
 	  TURN_ON_LED1;
   }
   TURN_OFF_LED1;
   uint16_t t=0;
   uint8_t tmp_buf[33];
+
+  // Test communication with the control board
   test_communication();
+
+
   NRF24L01_RX_Mode();
   /* USER CODE END 2 */
 

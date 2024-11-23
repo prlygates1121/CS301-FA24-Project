@@ -96,9 +96,6 @@ int main(void)
   HAL_TIM_Base_Start(&htim1);
   lcd_init();
   NRF24L01_Init();
-  uint8_t key, mode;
-  uint16_t t = 0;
-  uint8_t tmp_buf[33];
 
   // Checking NRF24L01 hardware
   while (NRF24L01_Check()) {
@@ -109,75 +106,16 @@ int main(void)
   }
 
   // Testing data transmission to/from the car board
-  test_communication();
-  while (1) {
-		if (KEY0_PRESSED) {
-			mode=0;
-			break;
-		} else if (KEY1_PRESSED) {
-			mode=1;
-			break;
-		}
-		t++;
-		if (t == 100) lcd_show_string(10, 150, 230, 16, 16, "KEY0:RX_Mode  KEY1:TX_Mode", BLUE);
-		if (t == 200) {
-			lcd_fill(10, 150, 230, 150+16, WHITE);
-			t = 0;
-		}
-		HAL_Delay(5);
-  }
-	lcd_fill(10,150,240,166,WHITE);
-	if (mode==0) {
-		lcd_show_string(30,150,200,16,16,"NRF24L01 RX_Mode", BLUE);
-		lcd_show_string(30,170,200,16,16,"Received DATA:", BLUE);
-		NRF24L01_RX_Mode();
-
-	} else {
-		lcd_show_string(30,150,200,16,16,"NRF24L01 TX_Mode", BLUE);
-		NRF24L01_TX_Mode();
-		mode=' ';
-	}
+//  test_communication();
+  draw_mode_selection_panel();
+  draw_control_panel();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if (mode == 0) {
-			if(NRF24L01_RxPacket(tmp_buf)==0)
-			{
-				tmp_buf[32]=0;
-				lcd_show_string(0,190,lcddev.width-1,32,16,tmp_buf, BLUE);
-			} else HAL_Delay_us(100);
-			t++;
-			if(t == 10000)
-			{
-				t=0;
-				HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-			}
-	  } else {
-		  HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-		  HAL_Delay(700);
-		  if (NRF24L01_TxPacket(tmp_buf)==TX_OK) {
-				lcd_show_string(30,170,239,32,16,"Sended DATA:", BLUE);
-				lcd_show_string(0, 190, lcddev.width-1, 32, 16, tmp_buf, BLUE);
-				key=mode;
-				for(t=0;t<32;t++)
-				{
-					key++;
-					if(key>('~'))key=' ';
-					tmp_buf[t]=key;
-				}
-				mode++;
-				if (mode>'~') mode=' ';
-				tmp_buf[32]=0;
-			} else {
-				lcd_fill(0, 170, lcddev.width, 170+16*3, WHITE);
-				lcd_show_string(30, 170, lcddev.width-1, 32, 16, "Send Failed ", BLUE);
-			};
-			HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-			HAL_Delay(700);
-	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

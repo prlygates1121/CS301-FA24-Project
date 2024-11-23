@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "24l01.h"
 #include "lcd_v4.h"
+#include "images.h"
 #include "tim.h"
 
 void HAL_Delay_us(uint32_t us) {
@@ -51,5 +52,113 @@ void test_communication() {
 				lcd_show_num(30, 170, test_data_received[5], 1, 16, BLACK);
 			}
 		}
+	}
+}
+
+void draw_control_panel() {
+	lcd_show_image(150, 100, arrow_white, RIGHT);
+	lcd_show_image(20, 100, arrow_white, LEFT);
+	lcd_show_image(86, 35, arrow_white, UP);
+	lcd_show_image(86, 165, arrow_white, DOWN);
+}
+
+void draw_arrow(uint32_t color, uint8_t direction) {
+	switch (direction) {
+		case RIGHT:
+			if (color == WHITE) {
+				lcd_show_image(160, 100, arrow_white, RIGHT);
+			} else {
+				lcd_show_image(160, 100, arrow_black, RIGHT);
+			}
+			break;
+		case DOWN:
+			if (color == WHITE) {
+				lcd_show_image(160, 100, arrow_white, DOWN);
+			} else {
+				lcd_show_image(160, 100, arrow_black, DOWN);
+			}
+			break;
+		case LEFT:
+			if (color == WHITE) {
+				lcd_show_image(160, 100, arrow_white, LEFT);
+			} else {
+				lcd_show_image(160, 100, arrow_black, LEFT);
+			}
+			break;
+		case UP:
+			if (color == WHITE) {
+				lcd_show_image(160, 100, arrow_white, UP);
+			} else {
+				lcd_show_image(160, 100, arrow_black, UP);
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+void draw_mode_selection_panel() {
+	// draw the mode selection panel
+	lcd_fill(0, 285, lcddev.height, lcddev.width, GRAY);
+
+	// draw the arrow button
+	uint16_t start_y = 300;
+	lcd_draw_line(25, start_y, 35, start_y - 10, BLACK);
+	lcd_draw_line(25, start_y, 35, start_y + 10, BLACK);
+	lcd_draw_line(lcddev.width - 25, start_y, lcddev.width - 35, start_y - 10, BLACK);
+	lcd_draw_line(lcddev.width - 25, start_y, lcddev.width - 35, start_y + 10, BLACK);
+
+	// draw the current mode (defaults to control mode)
+	lcd_fill(50, 285 + 4, lcddev.width - 50, lcddev.height - 9, WHITE);
+	lcd_draw_rectangle(50, 285 + 4, lcddev.width - 50, lcddev.height - 9, BLACK);
+	lcd_show_string(94, 291, 100, 16, 16, "CONTROL", BLACK);
+}
+
+void lcd_show_image(uint16_t x, uint16_t y, const uint8_t* image, uint8_t direction) {
+	const uint8_t *pointer = image;
+	uint16_t width = (*(pointer + 3) << 8) | (*(pointer + 2));
+	uint16_t height = (*(pointer + 5) << 8) | (*(pointer + 4));
+	pointer += 8;
+
+	switch (direction) {
+		// original direction
+		case 0:
+			for (uint16_t yy = y; yy < y + height; yy++) {
+				for (uint16_t xx = x; xx < x + width; xx++) {
+					lcd_draw_point(xx, yy, ((*(pointer + 1)) << 8) | (*pointer));
+					pointer += 2;
+				}
+			}
+			break;
+		// 90 degree clockwise rotation
+		case 1:
+			for (uint16_t xx = x; xx < x + width; xx++) {
+				for (uint16_t yy = y; yy < y + height; yy++) {
+					lcd_draw_point(xx, yy, ((*(pointer + 1)) << 8) | (*pointer));
+					pointer += 2;
+				}
+			}
+			break;
+		// 180 degree clockwise rotation
+		case 2:
+			for (uint16_t yy = y + height - 1; yy >= y; yy--) {
+				for (uint16_t xx = x + width - 1; xx >= x; xx--) {
+					lcd_draw_point(xx, yy, ((*(pointer + 1)) << 8) | (*pointer));
+					pointer += 2;
+				}
+			}
+			break;
+		// 270 degree clockwise rotation
+		case 3:
+			for (uint16_t xx = x + width - 1; xx >= x; xx--) {
+				for (uint16_t yy = y + height - 1; yy >= y; yy--) {
+					lcd_draw_point(xx, yy, ((*(pointer + 1)) << 8) | (*pointer));
+					pointer += 2;
+				}
+			}
+			break;
+		// default: do nothing
+		default:
+			break;
 	}
 }
