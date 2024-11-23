@@ -27,6 +27,8 @@
 #include "lcd_v4.h"
 #include "24l01.h"
 #include "utils.h"
+#include "touch.h"
+#include "24cxx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+uint8_t arrow_status[4] = {RELEASED};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +97,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim1);
   lcd_init();
+  tp_dev.init();
   NRF24L01_Init();
 
   // Checking NRF24L01 hardware
@@ -107,22 +110,100 @@ int main(void)
 
   // Testing data transmission to/from the car board
 //  test_communication();
+  NRF24L01_TX_Mode();
   draw_mode_selection_panel();
   draw_control_panel();
+//  uint32_t colors[] = {BLACK, BLUE, RED, GREEN, YELLOW, CYAN};
+//  uint8_t which = 0;
+  uint16_t t = 0;
+  uint16_t x_touch, y_touch;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  tp_dev.scan(0);
+	  if (tp_dev.sta & TP_PRES_DOWN) {
+		  x_touch = tp_dev.x[0];
+		  y_touch = tp_dev.y[0];
+		  if (x_touch < lcddev.width && y_touch < lcddev.height) {
+			  if (x_touch > 150 && x_touch < 220 && y_touch > 100 && y_touch < 170) {
+				  if (arrow_status[0] == RELEASED) {
+					  draw_arrow(BLACK, RIGHT);
+					  arrow_status[0] = PRESSED;
+				  }
+			  } else {
+				  if (arrow_status[0] == PRESSED) {
+					  draw_arrow(WHITE, RIGHT);
+					  arrow_status[0] = RELEASED;
+				  }
+			  }
+			  if (x_touch > 86 && x_touch < 156 && y_touch > 165 && y_touch < 235) {
+				  if (arrow_status[1] == RELEASED) {
+					  draw_arrow(BLACK, DOWN);
+					  arrow_status[1] = PRESSED;
+				  }
+			  } else {
+				  if (arrow_status[1] == PRESSED) {
+					  draw_arrow(WHITE, DOWN);
+					  arrow_status[1] = RELEASED;
+				  }
+			  }
+			  if (x_touch > 20 && x_touch < 90 && y_touch > 100 && y_touch < 170) {
+				  if (arrow_status[2] == RELEASED) {
+					  draw_arrow(BLACK, LEFT);
+					  arrow_status[2] = PRESSED;
+				  }
+			  } else {
+				  if (arrow_status[2] == PRESSED) {
+					  draw_arrow(WHITE, LEFT);
+					  arrow_status[2] = RELEASED;
+				  }
+			  }
+			  if (x_touch > 86 && x_touch < 156 && y_touch > 35 && y_touch < 105) {
+				  if (arrow_status[3] == RELEASED) {
+					  draw_arrow(BLACK, UP);
+					  arrow_status[3] = PRESSED;
+				  }
+			  } else {
+				  if (arrow_status[3] == PRESSED) {
+					  draw_arrow(WHITE, UP);
+					  arrow_status[3] = RELEASED;
+				  }
+			  }
+		  }
+//		  lcd_clear(colors[which]);
+//		  which = which == 5 ? 0 : which + 1;
+	  } else {
+		  if (arrow_status[0] == PRESSED) {
+			  draw_arrow(WHITE, RIGHT);
+			  arrow_status[0] = RELEASED;
+		  }
+		  if (arrow_status[1] == PRESSED) {
+			  draw_arrow(WHITE, DOWN);
+			  arrow_status[1] = RELEASED;
+		  }
+		  if (arrow_status[2] == PRESSED) {
+			  draw_arrow(WHITE, LEFT);
+			  arrow_status[2] = RELEASED;
+		  }
+		  if (arrow_status[3] == PRESSED) {
+			  draw_arrow(WHITE, UP);
+			  arrow_status[3] = RELEASED;
+		  }
+	  }
+	  t++;
+	  if (t == 15000) {
+		  t = 0;
+		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
-
 /**
   * @brief System Clock Configuration
   * @retval None

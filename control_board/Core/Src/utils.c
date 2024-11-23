@@ -56,40 +56,40 @@ void test_communication() {
 }
 
 void draw_control_panel() {
-	lcd_show_image(150, 100, arrow_white, RIGHT);
-	lcd_show_image(20, 100, arrow_white, LEFT);
-	lcd_show_image(86, 35, arrow_white, UP);
-	lcd_show_image(86, 165, arrow_white, DOWN);
+	draw_arrow(WHITE, RIGHT);
+	draw_arrow(WHITE, DOWN);
+	draw_arrow(WHITE, LEFT);
+	draw_arrow(WHITE, UP);
 }
 
 void draw_arrow(uint32_t color, uint8_t direction) {
 	switch (direction) {
 		case RIGHT:
 			if (color == WHITE) {
-				lcd_show_image(160, 100, arrow_white, RIGHT);
+				lcd_show_image(150, 100, arrow_white, RIGHT);
 			} else {
-				lcd_show_image(160, 100, arrow_black, RIGHT);
+				lcd_show_image(150, 100, arrow_black, RIGHT);
 			}
 			break;
 		case DOWN:
 			if (color == WHITE) {
-				lcd_show_image(160, 100, arrow_white, DOWN);
+				lcd_show_image(86, 165, arrow_white, DOWN);
 			} else {
-				lcd_show_image(160, 100, arrow_black, DOWN);
+				lcd_show_image(86, 165, arrow_black, DOWN);
 			}
 			break;
 		case LEFT:
 			if (color == WHITE) {
-				lcd_show_image(160, 100, arrow_white, LEFT);
+				lcd_show_image(20, 100, arrow_white, LEFT);
 			} else {
-				lcd_show_image(160, 100, arrow_black, LEFT);
+				lcd_show_image(20, 100, arrow_black, LEFT);
 			}
 			break;
 		case UP:
 			if (color == WHITE) {
-				lcd_show_image(160, 100, arrow_white, UP);
+				lcd_show_image(86, 35, arrow_white, UP);
 			} else {
-				lcd_show_image(160, 100, arrow_black, UP);
+				lcd_show_image(86, 35, arrow_black, UP);
 			}
 			break;
 		default:

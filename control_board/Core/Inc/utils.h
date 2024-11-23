@@ -10,11 +10,17 @@
 #define LEFT 2
 #define UP 3
 
+// arrow status
+#define RELEASED 0
+#define PRESSED 1
+
 void HAL_Delay_us(uint32_t us);
 
 void test_communication();
 
 void draw_control_panel();
+
+void draw_arrow(uint32_t color, uint8_t direction);
 
 void draw_mode_selection_panel();
 
