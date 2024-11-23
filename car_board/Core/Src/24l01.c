@@ -31,33 +31,27 @@ void NRF24L01_Init(void)
 {
     GPIO_InitTypeDef GPIO_Initure;
     __HAL_RCC_GPIOA_CLK_ENABLE();			//开启GPIOA时钟
-    __HAL_RCC_GPIOC_CLK_ENABLE();			//开启GPIOC时钟
     
-	//PA2,3,4初始化设置:推挽输出
-    GPIO_Initure.Pin=GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4; 
-    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  //推挽输出
-    GPIO_Initure.Pull=GPIO_PULLUP;          //上拉
-    GPIO_Initure.Speed=GPIO_SPEED_FREQ_HIGH;//高速
-    HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
-
-	//PC4推挽输出
-    GPIO_Initure.Pin=GPIO_PIN_4;			//PC4
-    HAL_GPIO_Init(GPIOC,&GPIO_Initure);     //初始化
+	//PA3,4初始化设置:推挽输出
+    GPIO_Initure.Pin = GPIO_PIN_3|GPIO_PIN_4;
+    GPIO_Initure.Mode = GPIO_MODE_OUTPUT_PP;  //推挽输出
+    GPIO_Initure.Pull = GPIO_PULLUP;          //上拉
+    GPIO_Initure.Speed = GPIO_SPEED_FREQ_HIGH;//高速
+    HAL_GPIO_Init(GPIOA, &GPIO_Initure);     //初始化
 	
-	//PA1上拉输入
-	GPIO_Initure.Pin=GPIO_PIN_1;			//PA1
+	//PA2上拉输入
+	GPIO_Initure.Pin=GPIO_PIN_2;			//PA2
 	GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
 	HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
 	
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);
     
 	MX_SPI1_Init();    		                //初始化SPI1
     NRF24L01_SPI_Init();                    //针对NRF的特点修改SPI的设置
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); 			                //使能24L01
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);			                //SPI片选取消
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET); 			                //使能24L01
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);			                //SPI片选取消
 }
 //检测24L01是否存在
 //返回值:0，成功;1，失败
@@ -78,10 +72,10 @@ uint8_t NRF24L01_Check(void)
 uint8_t NRF24L01_Write_Reg(uint8_t reg,uint8_t value)
 {
 	uint8_t status;
-   	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);                 //使能SPI传输
+   	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);                 //使能SPI传输
   	status =SPI1_ReadWriteByte(reg);//发送寄存器号
   	SPI1_ReadWriteByte(value);      //写入寄存器的值
-  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);                 //禁止SPI传输
+  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);                 //禁止SPI传输
   	return(status);       		    //返回状态值
 }
 //读取SPI寄存器值
@@ -89,10 +83,10 @@ uint8_t NRF24L01_Write_Reg(uint8_t reg,uint8_t value)
 uint8_t NRF24L01_Read_Reg(uint8_t reg)
 {
 	  uint8_t reg_val;
-   	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);             //使能SPI传输
+   	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);             //使能SPI传输
   	SPI1_ReadWriteByte(reg);    //发送寄存器号
   	reg_val=SPI1_ReadWriteByte(0XFF);//读取寄存器内容
-  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);             //禁止SPI传输
+  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);             //禁止SPI传输
   	return(reg_val);            //返回状态值
 }	
 //在指定位置读出指定长度的数据
@@ -103,10 +97,10 @@ uint8_t NRF24L01_Read_Reg(uint8_t reg)
 uint8_t NRF24L01_Read_Buf(uint8_t reg,uint8_t *pBuf,uint8_t len)
 {
 	uint8_t status,u8_ctr;
-  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);            //使能SPI传输
+  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);            //使能SPI传输
   	status=SPI1_ReadWriteByte(reg);//发送寄存器值(位置),并读取状态值
 	for(u8_ctr=0;u8_ctr<len;u8_ctr++)pBuf[u8_ctr]=SPI1_ReadWriteByte(0XFF);//读出数据
-  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);            //关闭SPI传输
+  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);            //关闭SPI传输
   	return status;             //返回读到的状态值
 }
 //在指定位置写指定长度的数据
@@ -117,10 +111,10 @@ uint8_t NRF24L01_Read_Buf(uint8_t reg,uint8_t *pBuf,uint8_t len)
 uint8_t NRF24L01_Write_Buf(uint8_t reg, uint8_t *pBuf, uint8_t len)
 {
 	uint8_t status,u8_ctr;
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);             //使能SPI传输
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);             //使能SPI传输
   	status = SPI1_ReadWriteByte(reg);//发送寄存器值(位置),并读取状态值
   	for(u8_ctr=0; u8_ctr<len; u8_ctr++)SPI1_ReadWriteByte(*pBuf++); //写入数据
-  	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);             //关闭SPI传输
+  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);             //关闭SPI传输
   	return status;              //返回读到的状态值
 }				   
 //启动NRF24L01发送一次数据
@@ -130,18 +124,20 @@ uint8_t NRF24L01_TxPacket(uint8_t *txbuf)
 {
 	uint8_t sta;
  	SPI1_SetSpeed(SPI_BAUDRATEPRESCALER_8); //spi速度为6.75Mhz（24L01的最大SPI时钟为10Mhz）
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
   	NRF24L01_Write_Buf(WR_TX_PLOAD,txbuf,TX_PLOAD_WIDTH);//写数据到TX BUF  32个字节
- 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);                         //启动发送
-	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1)!=0);                 //等待发送完成
-	sta=NRF24L01_Read_Reg(STATUS);          //读取状态寄存器的值
-	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta); //清除TX_DS或MAX_RT中断标志
-	if(sta&MAX_TX)                          //达到最大重发次数
+ 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET);                         //启动发送
+
+ 	// 中断处理
+	while (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2) != 0);              //等待发送完成（PA2引脚下拉）
+	sta = NRF24L01_Read_Reg(STATUS);                               //读取状态寄存器的值
+	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta);                  //清除TX_DS或MAX_RT中断标志
+	if(sta&MAX_TX)                                                 //达到最大重发次数
 	{
-		NRF24L01_Write_Reg(FLUSH_TX,0xff);  //清除TX FIFO寄存器
+		NRF24L01_Write_Reg(FLUSH_TX,0xff);                         //清除TX FIFO寄存器
 		return MAX_TX; 
 	}
-	if(sta&TX_OK)                           //发送完成
+	if(sta&TX_OK)                                                   //发送完成
 	{
 		return TX_OK;
 	}
@@ -169,33 +165,36 @@ uint8_t NRF24L01_RxPacket(uint8_t *rxbuf)
 //当CE变高后,即进入RX模式,并可以接收数据了
 void NRF24L01_RX_Mode(void)
 {
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
   	NRF24L01_Write_Buf(NRF_WRITE_REG+RX_ADDR_P0,(uint8_t*)RX_ADDRESS,RX_ADR_WIDTH);//写RX节点地址
 	  
   	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_AA,0x01);       //使能通道0的自动应答
   	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_RXADDR,0x01);   //使能通道0的接收地址
   	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_CH,40);	        //设置RF通信频率
   	NRF24L01_Write_Reg(NRF_WRITE_REG+RX_PW_P0,RX_PLOAD_WIDTH);//选择通道0的有效数据宽度
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_SETUP,0x0f);    //设置TX发射参数,0db增益,2Mbps,低噪声增益开启
+  	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_SETUP,0x0f);    //f设置TX发射参数,0db增益,2Mbps,低噪声增益开启
   	NRF24L01_Write_Reg(NRF_WRITE_REG+CONFIG, 0x0f);     //配置基本工作模式的参数;PWR_UP,EN_CRC,16BIT_CRC,接收模式
-  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET); //CE为高,进入接收模式
+  	NRF24L01_Write_Reg(FLUSH_TX,0xff);
+  	NRF24L01_Write_Reg(FLUSH_RX,0xff);
+  	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET); //CE为高,进入接收模式
 }						 
 //该函数初始化NRF24L01到TX模式
-//设置TX地址,写TX数据宽度,设置RX自动应答的地址,填充TX发送数据,选择RF频道,波特率和LNA HCURR
+//设置TX地址,写TX数据宽度,设置TX自动应答的地址,填充TX发送数据,选择RF频道,波特率和LNA HCURR
 //PWR_UP,CRC使能
-//当CE变高后,即进入RX模式,并可以接收数据了
+//当CE变高后,即进入TX模式,并可以接收数据了
 //CE为高大于10us,则启动发送.
 void NRF24L01_TX_Mode(void)
 {														 
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
 	NRF24L01_Write_Buf(NRF_WRITE_REG+TX_ADDR,(uint8_t*)TX_ADDRESS,TX_ADR_WIDTH);//写TX节点地址
 	NRF24L01_Write_Buf(NRF_WRITE_REG+RX_ADDR_P0,(uint8_t*)RX_ADDRESS,RX_ADR_WIDTH); //设置TX节点地址,主要为了使能ACK
-
 	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_AA,0x01);     //使能通道0的自动应答
 	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_RXADDR,0x01); //使能通道0的接收地址
 	NRF24L01_Write_Reg(NRF_WRITE_REG+SETUP_RETR,0x1a);//设置自动重发间隔时间:500us + 86us;最大自动重发次数:10次
 	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_CH,40);       //设置RF通道为40
 	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_SETUP,0x0f);  //设置TX发射参数,0db增益,2Mbps,低噪声增益开启
-	NRF24L01_Write_Reg(NRF_WRITE_REG+CONFIG,0x0e);    //配置基本工作模式的参数;PWR_UP,EN_CRC,16BIT_CRC,接收模式,开启所有中断
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);//CE为高,10us后启动发送
+	NRF24L01_Write_Reg(NRF_WRITE_REG+CONFIG,0x0e);    //配置基本工作模式的参数;PWR_UP,EN_CRC,16BIT_CRC,发送模式,开启所有中断
+  	NRF24L01_Write_Reg(FLUSH_TX,0xff);
+  	NRF24L01_Write_Reg(FLUSH_RX,0xff);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET);//CE为高,10us后启动发送
 }

@@ -3,3 +3,5 @@
 #define KEY_WAKEUP_PRESSED (HAL_GPIO_ReadPin(KEY_WAKEUP_GPIO_Port, KEY_WAKEUP_Pin) == GPIO_PIN_SET)
 
 void HAL_Delay_us(uint32_t us);
+
+void test_communication();

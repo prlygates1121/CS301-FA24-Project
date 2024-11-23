@@ -96,24 +96,22 @@ int main(void)
   HAL_TIM_Base_Start(&htim1);
   lcd_init();
   NRF24L01_Init();
-  uint8_t key,mode;
+  uint8_t key, mode;
   uint16_t t = 0;
   uint8_t tmp_buf[33];
 
-
-  lcd_show_string(30, 50, 200, 16, 16, "Mini STM32", BLACK);
-  lcd_show_string(30, 70, 200, 16, 16, "NRF24L01 TEST", BLACK);
-  lcd_show_string(30, 90, 200, 16, 16, "ATOM@ALIENTEK", BLACK);
-  lcd_show_string(30, 110, 200, 16, 16, "2019/11/15", BLACK);
-  while(NRF24L01_Check()) {
+  // Checking NRF24L01 hardware
+  while (NRF24L01_Check()) {
 		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
 		HAL_Delay(200);
 		lcd_fill(30, 130, 239, 130+16, WHITE);
 		HAL_Delay(200);
   }
-  lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 OK", BLACK);
-  while(1) {
-		if(KEY0_PRESSED) {
+
+  // Testing data transmission to/from the car board
+  test_communication();
+  while (1) {
+		if (KEY0_PRESSED) {
 			mode=0;
 			break;
 		} else if (KEY1_PRESSED) {

@@ -1,15 +1,16 @@
 #include <stdint.h>
 #include "utils.h"
+#include "24l01.h"
 #include "tim.h"
 
-/* --------------------------------------------- Custom Delay --------------------------------------------- */
+/* --------------------------------------------- Custom Delay -------------------------------------------- */
 
 void HAL_Delay_us(uint32_t us) {
 	__HAL_TIM_SET_COUNTER(&htim1, 0);
 	while (__HAL_TIM_GET_COUNTER(&htim1) < us);
 }
 
-/* -------------------------------------------- Servo Settings -------------------------------------------- */
+/* ------------------------------------------- Servo Functions ------------------------------------------- */
 
 void set_joint_angle(float angle)
 {
@@ -17,8 +18,7 @@ void set_joint_angle(float angle)
 	__HAL_TIM_SET_COMPARE(&htim5, TIM_CHANNEL_1, angle);
 }
 
-/* -------------------------------------- Ultrasonic Sensor Settings -------------------------------------- */
-
+/* ------------------------------------- Ultrasonic Sensor Functions ------------------------------------- */
 
 uint16_t UT_get_distance() {
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_SET);
@@ -27,11 +27,44 @@ uint16_t UT_get_distance() {
 	return US_distance * 10;
 }
 
+/* --------------------------------------- Communication Functions --------------------------------------- */
 
-/* -------------------------------------------- Motor Settings -------------------------------------------- */
+void test_communication() {
+	uint8_t test_data_received[32];
+	uint16_t t = 0;
+	// Receive test data from the control board
+	NRF24L01_RX_Mode();
+	while (1) {
+	  if (NRF24L01_RxPacket(test_data_received) == 0) {
+		  uint8_t equal = 1;
+		  for (uint8_t i = 0; i < 32; i++) {
+			  if (test_data_received[i] != i) {
+				  equal = 0;
+				  break;
+			  }
+		  }
+		  if (equal == 1) {
+			  break;
+		  }
+	  }
+	  t++;
+	  if (t == 10000) {
+		  t = 0;
+		  TOGGLE_LED1;
+	  }
+	}
+	TURN_ON_LED1;
+	// Send back the received data
+	NRF24L01_TX_Mode();
+	NRF24L01_TxPacket(test_data_received);
+	TURN_OFF_LED1;
+}
+
+
+/* -------------------------------------------- Motor Functions ------------------------------------------- */
 
 // Set motor speed and direction
-void mySpeedSet(uint8_t channel, int32_t speed)
+void set_speed(uint8_t channel, int32_t speed)
 {
     uint16_t pwm_value;
 
@@ -72,70 +105,59 @@ void mySpeedSet(uint8_t channel, int32_t speed)
 }
 
 // Move the car forward at a specified speed for a specified time
-void myCarRun(int8_t speed, uint32_t time)
+void car_run(int8_t speed)
 {
-    mySpeedSet(1, -speed);   // Left front motor
-    mySpeedSet(2, speed);   // Right front motor
-    mySpeedSet(3, -speed);   // Left rear motor
-    mySpeedSet(4, speed);   // Right rear motor
-    HAL_Delay(time);
+    set_speed(1, -speed);   // Left front motor
+    set_speed(2, speed);   // Right front motor
+    set_speed(3, -speed);   // Left rear motor
+    set_speed(4, speed);   // Right rear motor
 }
 
 // Stop the car by setting all motors' speed to 0
-void myCarBrake(uint32_t time)
+void car_brake()
 {
-    mySpeedSet(1, 0); // Left front motor
-    mySpeedSet(2, 0); // Right front motor
-    mySpeedSet(3, 0); // Left rear motor
-    mySpeedSet(4, 0); // Right rear motor
+    set_speed(1, 0); // Left front motor
+    set_speed(2, 0); // Right front motor
+    set_speed(3, 0); // Left rear motor
+    set_speed(4, 0); // Right rear motor
     HAL_GPIO_WritePin(MOTOR_DIR_FRONT_L_GPIO_Port, MOTOR_DIR_FRONT_L_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(MOTOR_DIR_FRONT_R_GPIO_Port, MOTOR_DIR_FRONT_R_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(MOTOR_DIR_REAR_L_GPIO_Port, MOTOR_DIR_REAR_L_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(MOTOR_DIR_REAR_R_GPIO_Port, MOTOR_DIR_REAR_R_Pin, GPIO_PIN_RESET);
-
-//    HAL_GPIO_WritePin(LEFT_FRONT_MOTOR_DIR_PORT, LEFT_FRONT_MOTOR_DIR_PIN, GPIO_PIN_RESET);
-//    HAL_GPIO_WritePin(RIGHT_FRONT_MOTOR_DIR_PORT, RIGHT_FRONT_MOTOR_DIR_PIN, GPIO_PIN_RESET);
-//    HAL_GPIO_WritePin(LEFT_REAR_MOTOR_DIR_PORT, LEFT_REAR_MOTOR_DIR_PIN, GPIO_PIN_RESET);
-//    HAL_GPIO_WritePin(RIGHT_REAR_MOTOR_DIR_PORT, RIGHT_REAR_MOTOR_DIR_PIN, GPIO_PIN_RESET);
-    HAL_Delay(time);
 }
 
 // Turn the car left by stopping the left motors and moving the right motors forward
-void myCarLeft(int8_t speed, uint32_t time)
+void car_turn_left(int8_t speed)
 {
-    mySpeedSet(1, 0);      // Stop left front motor
-    mySpeedSet(2, speed);  // Right front motor forward
-    mySpeedSet(3, 0);      // Stop left rear motor
-    mySpeedSet(4, speed);  // Right rear motor forward
-    HAL_Delay(time);
+    set_speed(1, 0);      // Stop left front motor
+    set_speed(2, speed);  // Right front motor forward
+    set_speed(3, 0);      // Stop left rear motor
+    set_speed(4, speed);  // Right rear motor forward
 }
 
 // Turn the car right by stopping the right motors and moving the left motors forward
-void myCarRight(int8_t speed, uint32_t time)
+void car_turn_right(int8_t speed)
 {
-    mySpeedSet(1, speed);  // Left front motor forward
-    mySpeedSet(2, 0);      // Stop right front motor
-    mySpeedSet(3, speed);  // Left rear motor forward
-    mySpeedSet(4, 0);      // Stop right rear motor
-    HAL_Delay(time);
+    set_speed(1, speed);  // Left front motor forward
+    set_speed(2, 0);      // Stop right front motor
+    set_speed(3, speed);  // Left rear motor forward
+    set_speed(4, 0);      // Stop right rear motor
 }
 
 // Spin the car left by rotating left wheels backward and right wheels forward
-void myCarSpinLeft(int8_t speed, uint32_t time)
+void car_spin_left(int8_t speed)
 {
-    mySpeedSet(1, -speed); // Left front motor backward
-    mySpeedSet(2, speed);  // Right front motor forward
-    mySpeedSet(3, -speed); // Left rear motor backward
-    mySpeedSet(4, speed);  // Right rear motor forward
-    HAL_Delay(time);
+    set_speed(1, -speed); // Left front motor backward
+    set_speed(2, speed);  // Right front motor forward
+    set_speed(3, -speed); // Left rear motor backward
+    set_speed(4, speed);  // Right rear motor forward
 }
 
 // Spin the car right by rotating right wheels backward and left wheels forward
-void myCarSpinRight(int8_t speed, uint32_t time)
+void car_spin_right(int8_t speed)
 {
-    mySpeedSet(1, speed);  // Left front motor forward
-    mySpeedSet(2, -speed); // Right front motor backward
-    mySpeedSet(3, speed);  // Left rear motor forward
-    mySpeedSet(4, -speed); // Right rear motor backward
-    HAL_Delay(time);
+    set_speed(1, speed);  // Left front motor forward
+    set_speed(2, -speed); // Right front motor backward
+    set_speed(3, speed);  // Left rear motor forward
+    set_speed(4, -speed); // Right rear motor backward
 }

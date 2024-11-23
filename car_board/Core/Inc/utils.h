@@ -31,27 +31,29 @@
 
 extern float US_distance;
 
-/* --------------------------------------------- Custom Delay --------------------------------------------- */
+/* --------------------------------------------- Custom Delay ---------------------------------------------- */
 
-// Microsecond-level delay function
 void HAL_Delay_us(uint32_t us);
 
-/* -------------------------------------------- Servo Settings -------------------------------------------- */
+/* -------------------------------------------- Servo Functions -------------------------------------------- */
 
-// set the angle of the servo motor
 void set_joint_angle(float angle);
 
-/* -------------------------------------- Ultrasonic Sensor Settings -------------------------------------- */
+/* -------------------------------------- Ultrasonic Sensor Functions -------------------------------------- */
 
 // measure distance via ultrasonic module
 uint16_t UT_get_distance();
 
-/* -------------------------------------------- Motor Settings -------------------------------------------- */
+/* ---------------------------------------- Communication Functions ---------------------------------------- */
 
-void mySpeedSet(uint8_t channel, int32_t speed);
-void myCarRun(int8_t speed, uint32_t time);
-void myCarBrake(uint32_t time);
-void myCarLeft(int8_t speed, uint32_t time);
-void myCarRight(int8_t speed, uint32_t time);
-void myCarSpinLeft(int8_t speed, uint32_t time);
-void myCarSpinRight(int8_t speed, uint32_t time);
+void test_communication();
+
+/* -------------------------------------------- Motor Functions -------------------------------------------- */
+
+void set_speed(uint8_t channel, int32_t speed);
+void car_run(int8_t speed);
+void car_brake();
+void car_turn_left(int8_t speed);
+void car_turn_right(int8_t speed);
+void car_spin_left(int8_t speed);
+void car_spin_right(int8_t speed);

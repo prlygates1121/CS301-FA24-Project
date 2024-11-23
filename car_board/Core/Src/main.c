@@ -106,7 +106,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   TURN_OFF_BUZZER;
-  myCarBrake(0);
+  car_brake(0);
   NRF24L01_Init();
   // Check if NRF24L01 module is
   while(NRF24L01_Check()) {
@@ -116,9 +116,8 @@ int main(void)
   TURN_OFF_LED1;
   uint16_t t=0;
   uint8_t tmp_buf[33];
-
-//接收
-NRF24L01_RX_Mode();
+  test_communication();
+  NRF24L01_RX_Mode();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -127,11 +126,11 @@ while (1)
   {
 	if (NRF24L01_RxPacket(tmp_buf)==0)
 	{
-		TURN_ON_BUZZER;
+//		TURN_ON_BUZZER;
 		HAL_Delay(500);
 	} else {
 		HAL_Delay_us(100);
-		TURN_OFF_BUZZER;
+//		TURN_OFF_BUZZER;
 	}
 	t++;
 	if (t == 10000) {
