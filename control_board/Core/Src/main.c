@@ -109,12 +109,14 @@ int main(void)
   }
 
   // Testing data transmission to/from the car board
-//  test_communication();
+  test_communication();
+
   NRF24L01_TX_Mode();
+  uint8_t command[32];
+
   draw_mode_selection_panel();
   draw_control_panel();
-//  uint32_t colors[] = {BLACK, BLUE, RED, GREEN, YELLOW, CYAN};
-//  uint8_t which = 0;
+
   uint16_t t = 0;
   uint16_t x_touch, y_touch;
   /* USER CODE END 2 */
@@ -123,14 +125,20 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // scan the touch
 	  tp_dev.scan(0);
+	  // if the screen is touched
 	  if (tp_dev.sta & TP_PRES_DOWN) {
 		  x_touch = tp_dev.x[0];
 		  y_touch = tp_dev.y[0];
+		  // if the touch coordinate is valid
 		  if (x_touch < lcddev.width && y_touch < lcddev.height) {
+			  // if the touch is on the right arrow
 			  if (x_touch > 150 && x_touch < 220 && y_touch > 100 && y_touch < 170) {
 				  if (arrow_status[0] == RELEASED) {
 					  draw_arrow(BLACK, RIGHT);
+					  command[0] = MOVE_RIGHT;
+					  NRF24L01_TxPacket(command);
 					  arrow_status[0] = PRESSED;
 				  }
 			  } else {
@@ -139,9 +147,12 @@ int main(void)
 					  arrow_status[0] = RELEASED;
 				  }
 			  }
+			  // if the touch is on the down arrow
 			  if (x_touch > 86 && x_touch < 156 && y_touch > 165 && y_touch < 235) {
 				  if (arrow_status[1] == RELEASED) {
 					  draw_arrow(BLACK, DOWN);
+					  command[0] = MOVE_BACKWARD;
+					  NRF24L01_TxPacket(command);
 					  arrow_status[1] = PRESSED;
 				  }
 			  } else {
@@ -150,9 +161,12 @@ int main(void)
 					  arrow_status[1] = RELEASED;
 				  }
 			  }
+			  // if the touch is on the left arrow
 			  if (x_touch > 20 && x_touch < 90 && y_touch > 100 && y_touch < 170) {
 				  if (arrow_status[2] == RELEASED) {
 					  draw_arrow(BLACK, LEFT);
+					  command[0] = MOVE_LEFT;
+					  NRF24L01_TxPacket(command);
 					  arrow_status[2] = PRESSED;
 				  }
 			  } else {
@@ -161,9 +175,12 @@ int main(void)
 					  arrow_status[2] = RELEASED;
 				  }
 			  }
+			  // if the touch is on the up arrow
 			  if (x_touch > 86 && x_touch < 156 && y_touch > 35 && y_touch < 105) {
 				  if (arrow_status[3] == RELEASED) {
 					  draw_arrow(BLACK, UP);
+					  command[0] = MOVE_FORWARD;
+					  NRF24L01_TxPacket(command);
 					  arrow_status[3] = PRESSED;
 				  }
 			  } else {
@@ -173,9 +190,8 @@ int main(void)
 				  }
 			  }
 		  }
-//		  lcd_clear(colors[which]);
-//		  which = which == 5 ? 0 : which + 1;
-	  } else {
+	  } else { // if the screen is not touched
+		  // set all arrow status to RELEASED if they are PRESSED
 		  if (arrow_status[0] == PRESSED) {
 			  draw_arrow(WHITE, RIGHT);
 			  arrow_status[0] = RELEASED;
@@ -191,6 +207,12 @@ int main(void)
 		  if (arrow_status[3] == PRESSED) {
 			  draw_arrow(WHITE, UP);
 			  arrow_status[3] = RELEASED;
+		  }
+		  // send BRAKE command to the car board if BRAKE has not been sent
+		  if (command[0] != BRAKE) {
+			  HAL_Delay(100);
+			  command[0] = BRAKE;
+			  NRF24L01_TxPacket(command);
 		  }
 	  }
 	  t++;

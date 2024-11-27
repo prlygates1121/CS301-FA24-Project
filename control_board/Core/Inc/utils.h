@@ -14,6 +14,15 @@
 #define RELEASED 0
 #define PRESSED 1
 
+// Commands for communication
+#define MOVE_FORWARD 1
+#define MOVE_BACKWARD 2
+#define MOVE_LEFT 3
+#define MOVE_RIGHT 4
+#define SPIN_LEFT 5
+#define SPIN_RIGHT 6
+#define BRAKE 7
+
 void HAL_Delay_us(uint32_t us);
 
 void test_communication();

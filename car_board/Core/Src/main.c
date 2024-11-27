@@ -48,6 +48,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint8_t rx_buf[32] = {0};
+uint8_t command_ready = 0;
 
 /* USER CODE END PV */
 
@@ -97,8 +99,6 @@ int main(void)
   MX_TIM4_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-
-
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
@@ -106,16 +106,14 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   TURN_OFF_BUZZER;
-  car_brake(0);
+  car_brake();
   NRF24L01_Init();
   // Check if NRF24L01 module is
   while (NRF24L01_Check()) {
-	  HAL_Delay(400);
+	  HAL_Delay(100);
 	  TURN_ON_LED1;
   }
   TURN_OFF_LED1;
-  uint16_t t=0;
-  uint8_t tmp_buf[33];
 
   // Test communication with the control board
   test_communication();
@@ -128,18 +126,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 while (1)
   {
-	if (NRF24L01_RxPacket(tmp_buf)==0)
-	{
-//		TURN_ON_BUZZER;
-		HAL_Delay(500);
-	} else {
-		HAL_Delay_us(100);
-//		TURN_OFF_BUZZER;
-	}
-	t++;
-	if (t == 10000) {
-		t = 0;
-		TOGGLE_LED2;
+	if (command_ready) {
+		process_command(rx_buf);
+		command_ready = 0;
 	}
     /* USER CODE END WHILE */
 

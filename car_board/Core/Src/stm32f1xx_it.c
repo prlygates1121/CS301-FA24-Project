@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "utils.h"
+#include "24l01.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +48,6 @@
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-void nRF24_IT_Handler(uint16_t gpio);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -59,6 +59,8 @@ float US_distance;
 
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim2;
+extern uint8_t rx_buf[32];
+extern uint8_t command_ready;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -213,10 +215,25 @@ void EXTI1_IRQHandler(void)
   /* USER CODE END EXTI1_IRQn 1 */
 }
 
+/**
+  * @brief This function handles EXTI line2 interrupt.
+  */
+void EXTI2_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI2_IRQn 0 */
+
+  /* USER CODE END EXTI2_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(NRF_IRQ_Pin);
+  /* USER CODE BEGIN EXTI2_IRQn 1 */
+
+  /* USER CODE END EXTI2_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	TOGGLE_LED1;
 	HAL_Delay_us(10);
-	if (GPIO_Pin == US_STATUS_Pin) {
+	if (0) {
 		// Set TIM2 counter to 0
 		__HAL_TIM_SET_COUNTER(&htim2, 0);
 		// Start counter
@@ -227,8 +244,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		__HAL_TIM_DISABLE(&htim2);
 		// Get the elapsed time
 		US_distance = __HAL_TIM_GET_COUNTER(&htim2) * 5 * 34 / 200.0;
-	} else {
-
+	} else if (GPIO_Pin == NRF_IRQ_Pin) {
+		uint8_t sta = NRF24L01_Read_Reg(STATUS);
+		if (sta & RX_OK)
+		{
+			NRF24L01_Read_Buf(RD_RX_PLOAD, rx_buf, RX_PLOAD_WIDTH);
+			NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS, sta);
+			NRF24L01_Write_Reg(FLUSH_RX, 0xff);
+			command_ready = 1;
+		}
 	}
 }
 /* USER CODE END 1 */

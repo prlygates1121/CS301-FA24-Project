@@ -134,8 +134,8 @@ uint8_t NRF24L01_TxPacket(uint8_t *txbuf)
 
  	// 中断处理
 	while (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1) != 0);              //等待发送完成（PA1引脚下拉）
-	sta=NRF24L01_Read_Reg(STATUS);                                 //读取状态寄存器的值
-	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta);                  //清除TX_DS或MAX_RT中断标志
+	sta = NRF24L01_Read_Reg(STATUS);                                 //读取状态寄存器的值
+	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta);
 	if(sta&MAX_TX)                                                 //达到最大重发次数
 	{
 		NRF24L01_Write_Reg(FLUSH_TX,0xff);                         //清除TX FIFO寄存器
@@ -143,6 +143,7 @@ uint8_t NRF24L01_TxPacket(uint8_t *txbuf)
 	}
 	if(sta&TX_OK)                                                  //发送完成
 	{
+		NRF24L01_Write_Reg(FLUSH_TX,0xff);                         //清除TX FIFO寄存器
 		return TX_OK;
 	}
 	return 0xff;//其他原因发送失败

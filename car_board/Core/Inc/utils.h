@@ -29,6 +29,15 @@
 #define TURN_ON_BUZZER if (HAL_GPIO_ReadPin(BUZZER_GPIO_Port, BUZZER_Pin) == GPIO_PIN_SET) HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET)
 #define TURN_OFF_BUZZER if (HAL_GPIO_ReadPin(BUZZER_GPIO_Port, BUZZER_Pin) == GPIO_PIN_RESET) HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET)
 
+// Commands for communication
+#define MOVE_FORWARD 1
+#define MOVE_BACKWARD 2
+#define MOVE_LEFT 3
+#define MOVE_RIGHT 4
+#define SPIN_LEFT 5
+#define SPIN_RIGHT 6
+#define BRAKE 7
+
 extern float US_distance;
 
 /* --------------------------------------------- Custom Delay ---------------------------------------------- */
@@ -41,19 +50,21 @@ void set_joint_angle(float angle);
 
 /* -------------------------------------- Ultrasonic Sensor Functions -------------------------------------- */
 
-// measure distance via ultrasonic module
 uint16_t UT_get_distance();
 
 /* ---------------------------------------- Communication Functions ---------------------------------------- */
 
 void test_communication();
+void process_command(uint8_t command[]);
 
 /* -------------------------------------------- Motor Functions -------------------------------------------- */
 
 void set_speed(uint8_t channel, int32_t speed);
-void car_run(int8_t speed);
+void car_run(int32_t speed);
 void car_brake();
-void car_turn_left(int8_t speed);
-void car_turn_right(int8_t speed);
-void car_spin_left(int8_t speed);
-void car_spin_right(int8_t speed);
+void car_turn_left(int32_t speed);
+void car_turn_right(int32_t speed);
+void car_move_right(int32_t speed);
+void car_move_left(int32_t speed);
+void car_spin_left(int32_t speed);
+void car_spin_right(int32_t speed);

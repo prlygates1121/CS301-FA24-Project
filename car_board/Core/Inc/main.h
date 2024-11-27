@@ -66,6 +66,9 @@ void Error_Handler(void);
 #define US_STATUS_EXTI_IRQn EXTI1_IRQn
 #define SERVO_Pin GPIO_PIN_0
 #define SERVO_GPIO_Port GPIOA
+#define NRF_IRQ_Pin GPIO_PIN_2
+#define NRF_IRQ_GPIO_Port GPIOA
+#define NRF_IRQ_EXTI_IRQn EXTI2_IRQn
 #define KEY1_Pin GPIO_PIN_4
 #define KEY1_GPIO_Port GPIOC
 #define KEY2_Pin GPIO_PIN_5

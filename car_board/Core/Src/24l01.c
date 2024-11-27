@@ -39,12 +39,12 @@ void NRF24L01_Init(void)
     GPIO_Initure.Speed = GPIO_SPEED_FREQ_HIGH;//高速
     HAL_GPIO_Init(GPIOA, &GPIO_Initure);     //初始化
 	
-	//PA2上拉输入
-	GPIO_Initure.Pin=GPIO_PIN_2;			//PA2
-	GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
-	HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
-	
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_SET);
+//	//PA2上拉输入
+//	GPIO_Initure.Pin=GPIO_PIN_2;			//PA2
+//	GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
+//	HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
+//
+//	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);
     
@@ -139,6 +139,7 @@ uint8_t NRF24L01_TxPacket(uint8_t *txbuf)
 	}
 	if(sta&TX_OK)                                                   //发送完成
 	{
+		NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta);
 		return TX_OK;
 	}
 	return 0xff;//其他原因发送失败

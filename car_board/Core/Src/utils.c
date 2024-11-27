@@ -60,6 +60,59 @@ void test_communication() {
 	TURN_OFF_LED1;
 }
 
+void process_command(uint8_t command[]) {
+	switch (command[0]) {
+		case MOVE_FORWARD:
+			car_run(55);
+//			TURN_ON_BUZZER;
+//			HAL_Delay(5000);
+//			TURN_OFF_BUZZER;
+			HAL_Delay(500);
+			car_brake();
+			break;
+		case MOVE_BACKWARD:
+			car_run(-55);
+//			TURN_ON_BUZZER;
+//			HAL_Delay(500);
+//			TURN_OFF_BUZZER;
+//			HAL_Delay(500);
+//			TURN_ON_BUZZER;
+//			HAL_Delay(500);
+//			TURN_OFF_BUZZER;
+			HAL_Delay(500);
+			car_brake();
+			break;
+		case MOVE_LEFT:
+			car_move_left(55);
+//			TURN_ON_LED1;
+//			HAL_Delay(500);
+//			TURN_OFF_LED1;
+			HAL_Delay(500);
+			car_brake();
+			break;
+		case MOVE_RIGHT:
+			car_move_right(55);
+//			TURN_ON_LED1;
+//			HAL_Delay(500);
+//			TURN_OFF_LED1;
+//			HAL_Delay(500);
+//			TURN_ON_LED1;
+//			HAL_Delay(500);
+//			TURN_OFF_LED1;
+			HAL_Delay(500);
+			car_brake();
+			break;
+		case BRAKE:
+			car_brake();
+//			TURN_ON_BUZZER;
+//			HAL_Delay(500);
+//			TURN_OFF_BUZZER;
+			break;
+		default: // Invalid command
+			break;
+	}
+}
+
 
 /* -------------------------------------------- Motor Functions ------------------------------------------- */
 
@@ -72,28 +125,33 @@ void set_speed(uint8_t channel, int32_t speed)
     if (speed > 100) speed = 100;
     if (speed < -100) speed = -100;
 
-    // Calculate PWM value based on speed
-    pwm_value = (speed >= 0) ? (7201 - speed * 72) : (7201 + speed * 72);
-
     // Set PWM duty cycle and direction based on channel
     switch (channel)
     {
-        case 1: // Left front motor
+        case 1: // Left rear
+            if (speed > 0) speed = 101 - speed;
+            pwm_value = (speed >= 0) ? (7201 - speed * 72) : (7201 + speed * 72);
             __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pwm_value);
             HAL_GPIO_WritePin(MOTOR_DIR_FRONT_L_GPIO_Port, MOTOR_DIR_FRONT_L_Pin, speed >= 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
             break;
 
-        case 2: // Right front motor
+        case 2: // Right front
+        	if (speed < 0) speed = -101 - speed;
+            pwm_value = (speed >= 0) ? (7201 - speed * 72) : (7201 + speed * 72);
             __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, pwm_value);
             HAL_GPIO_WritePin(MOTOR_DIR_FRONT_R_GPIO_Port, MOTOR_DIR_FRONT_R_Pin, speed >= 0 ? GPIO_PIN_RESET : GPIO_PIN_SET);
             break;
 
-        case 3: // Left rear motor
+        case 3: // Left front
+            if (speed > 0) speed = 101 - speed;
+            pwm_value = (speed >= 0) ? (7201 - speed * 72) : (7201 + speed * 72);
             __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, pwm_value);
             HAL_GPIO_WritePin(MOTOR_DIR_REAR_L_GPIO_Port, MOTOR_DIR_REAR_L_Pin, speed >= 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
             break;
 
-        case 4: // Right rear motor
+        case 4: // Right rear
+        	if (speed < 0) speed = -101 - speed;
+            pwm_value = (speed >= 0) ? (7201 - speed * 72) : (7201 + speed * 72);
             __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, pwm_value);
             HAL_GPIO_WritePin(MOTOR_DIR_REAR_R_GPIO_Port, MOTOR_DIR_REAR_R_Pin, speed >= 0 ? GPIO_PIN_RESET : GPIO_PIN_SET);
             break;
@@ -105,21 +163,21 @@ void set_speed(uint8_t channel, int32_t speed)
 }
 
 // Move the car forward at a specified speed for a specified time
-void car_run(int8_t speed)
+void car_run(int32_t speed)
 {
-    set_speed(1, -speed);   // Left front motor
-    set_speed(2, speed);   // Right front motor
-    set_speed(3, -speed);   // Left rear motor
-    set_speed(4, speed);   // Right rear motor
+    set_speed(1, -speed);
+    set_speed(2, speed);
+    set_speed(3, -speed);
+    set_speed(4, speed);
 }
 
 // Stop the car by setting all motors' speed to 0
 void car_brake()
 {
-    set_speed(1, 0); // Left front motor
-    set_speed(2, 0); // Right front motor
-    set_speed(3, 0); // Left rear motor
-    set_speed(4, 0); // Right rear motor
+    set_speed(1, 0);
+    set_speed(2, 0);
+    set_speed(3, 0);
+    set_speed(4, 0);
     HAL_GPIO_WritePin(MOTOR_DIR_FRONT_L_GPIO_Port, MOTOR_DIR_FRONT_L_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(MOTOR_DIR_FRONT_R_GPIO_Port, MOTOR_DIR_FRONT_R_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(MOTOR_DIR_REAR_L_GPIO_Port, MOTOR_DIR_REAR_L_Pin, GPIO_PIN_RESET);
@@ -127,7 +185,7 @@ void car_brake()
 }
 
 // Turn the car left by stopping the left motors and moving the right motors forward
-void car_turn_left(int8_t speed)
+void car_turn_left(int32_t speed)
 {
     set_speed(1, 0);      // Stop left front motor
     set_speed(2, speed);  // Right front motor forward
@@ -136,7 +194,7 @@ void car_turn_left(int8_t speed)
 }
 
 // Turn the car right by stopping the right motors and moving the left motors forward
-void car_turn_right(int8_t speed)
+void car_turn_right(int32_t speed)
 {
     set_speed(1, speed);  // Left front motor forward
     set_speed(2, 0);      // Stop right front motor
@@ -144,8 +202,23 @@ void car_turn_right(int8_t speed)
     set_speed(4, 0);      // Stop right rear motor
 }
 
+void car_move_right(int32_t speed) {
+	set_speed(3, speed);
+	set_speed(4, speed);
+	set_speed(1, -speed);
+	set_speed(2, -speed);
+}
+
+void car_move_left(int32_t speed) {
+	set_speed(3, -speed);
+	set_speed(4, -speed);
+	set_speed(1, speed);
+	set_speed(2, speed);
+}
+
+
 // Spin the car left by rotating left wheels backward and right wheels forward
-void car_spin_left(int8_t speed)
+void car_spin_left(int32_t speed)
 {
     set_speed(1, -speed); // Left front motor backward
     set_speed(2, speed);  // Right front motor forward
@@ -154,7 +227,7 @@ void car_spin_left(int8_t speed)
 }
 
 // Spin the car right by rotating right wheels backward and left wheels forward
-void car_spin_right(int8_t speed)
+void car_spin_right(int32_t speed)
 {
     set_speed(1, speed);  // Left front motor forward
     set_speed(2, -speed); // Right front motor backward
