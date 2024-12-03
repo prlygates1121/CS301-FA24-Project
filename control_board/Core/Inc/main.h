@@ -36,7 +36,25 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+extern int mode;
+extern uint8_t arrow_status[7];
+extern uint8_t grid_status[16];
+extern uint8_t path[16];
+extern int pnt;
+extern uint32_t lastTime;
+extern uint32_t time_threshold;
+extern int signal;
+extern unsigned char DATA_TO_SEND[800];
+extern int last_x;
+extern int last_y;
+extern UART_HandleTypeDef huart1;
+extern int start_point;
+extern int end_point;
+extern int trap_point;
+extern int move_signal;
+extern int control;
+extern uint32_t debounceTime;
+extern int debounceLabel;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

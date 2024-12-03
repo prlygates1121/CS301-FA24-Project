@@ -20,6 +20,7 @@
 #include "main.h"
 #include "spi.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -29,6 +30,8 @@
 #include "utils.h"
 #include "touch.h"
 #include "24cxx.h"
+#include "stdbool.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,7 +52,25 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t arrow_status[4] = {RELEASED};
+uint8_t arrow_status[7] = {RELEASED};//5 stop 6 le 7 ri
+int mode = 1;//0: control   1:draw   2:auto
+uint8_t grid_status[16] = {0};
+uint8_t path[16] = {-1};
+int pnt = 0;
+uint32_t lastTime = 0;
+uint32_t debounceTime = -1;
+uint32_t time_threshold = 70;
+int signal = 0;
+unsigned char DATA_TO_SEND[800];
+int last_x = -1;
+int last_y = -1;
+int start_point = 0;//0:empty 1:choosed 2:setted
+int end_point = 0;//0:empty 1:choosed 2:setted
+int trap_point = 0;//0:empty 1:choosed 2:setted
+int move_signal = 0;//0:still 1:move
+int control = 0;//0:empty 1:choosed 2:setted
+int debounceLabel = 0;//0:没按过 1:第一次按了
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,7 +81,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+//extern UART_HandleTypeDef huart1;
+extern uint8_t rxBuffer[20];
 /* USER CODE END 0 */
 
 /**
@@ -94,24 +116,26 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_TIM1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim1);
+//  HAL_UART_Receive_IT(&huart1, (uint8_t *)rxBuffer, 1);
   lcd_init();
   tp_dev.init();
-  NRF24L01_Init();
+//  NRF24L01_Init();
 
   // Checking NRF24L01 hardware
-  while (NRF24L01_Check()) {
-		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
-		HAL_Delay(200);
-		lcd_fill(30, 130, 239, 130+16, WHITE);
-		HAL_Delay(200);
-  }
+//  while (NRF24L01_Check()) {
+//		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
+//		HAL_Delay(200);
+//		lcd_fill(30, 130, 239, 130+16, WHITE);
+//		HAL_Delay(200);
+//  }
 
   // Testing data transmission to/from the car board
-  test_communication();
+//  test_communication();
 
-  NRF24L01_TX_Mode();
+//  NRF24L01_TX_Mode();
   uint8_t command[32];
 
   draw_mode_selection_panel();
@@ -119,6 +143,11 @@ int main(void)
 
   uint16_t t = 0;
   uint16_t x_touch, y_touch;
+
+  //init
+  for (int i = 0; i < 16; i++) {
+      path[i] = -1;
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -128,92 +157,102 @@ int main(void)
 	  // scan the touch
 	  tp_dev.scan(0);
 	  // if the screen is touched
-	  if (tp_dev.sta & TP_PRES_DOWN) {
+	  if (tp_dev.sta & TP_PRES_DOWN) {//触摸屏被按下
 		  x_touch = tp_dev.x[0];
 		  y_touch = tp_dev.y[0];
 		  // if the touch coordinate is valid
 		  if (x_touch < lcddev.width && y_touch < lcddev.height) {
-			  // if the touch is on the right arrow
-			  if (x_touch > 150 && x_touch < 220 && y_touch > 100 && y_touch < 170) {
-				  if (arrow_status[0] == RELEASED) {
-					  draw_arrow(BLACK, RIGHT);
-					  command[0] = MOVE_RIGHT;
-					  NRF24L01_TxPacket(command);
-					  arrow_status[0] = PRESSED;
-				  }
-			  } else {
-				  if (arrow_status[0] == PRESSED) {
-					  draw_arrow(WHITE, RIGHT);
-					  arrow_status[0] = RELEASED;
-				  }
-			  }
-			  // if the touch is on the down arrow
-			  if (x_touch > 86 && x_touch < 156 && y_touch > 165 && y_touch < 235) {
-				  if (arrow_status[1] == RELEASED) {
-					  draw_arrow(BLACK, DOWN);
-					  command[0] = MOVE_BACKWARD;
-					  NRF24L01_TxPacket(command);
-					  arrow_status[1] = PRESSED;
-				  }
-			  } else {
-				  if (arrow_status[1] == PRESSED) {
-					  draw_arrow(WHITE, DOWN);
-					  arrow_status[1] = RELEASED;
-				  }
-			  }
-			  // if the touch is on the left arrow
-			  if (x_touch > 20 && x_touch < 90 && y_touch > 100 && y_touch < 170) {
-				  if (arrow_status[2] == RELEASED) {
-					  draw_arrow(BLACK, LEFT);
-					  command[0] = MOVE_LEFT;
-					  NRF24L01_TxPacket(command);
-					  arrow_status[2] = PRESSED;
-				  }
-			  } else {
-				  if (arrow_status[2] == PRESSED) {
-					  draw_arrow(WHITE, LEFT);
-					  arrow_status[2] = RELEASED;
-				  }
-			  }
-			  // if the touch is on the up arrow
-			  if (x_touch > 86 && x_touch < 156 && y_touch > 35 && y_touch < 105) {
-				  if (arrow_status[3] == RELEASED) {
-					  draw_arrow(BLACK, UP);
-					  command[0] = MOVE_FORWARD;
-					  NRF24L01_TxPacket(command);
-					  arrow_status[3] = PRESSED;
-				  }
-			  } else {
-				  if (arrow_status[3] == PRESSED) {
-					  draw_arrow(WHITE, UP);
-					  arrow_status[3] = RELEASED;
-				  }
+			  mode_switch_panel(x_touch, y_touch);
+			  switch(mode){
+				  case 0:
+					  mode_control(x_touch, y_touch, 1);
+					  break;
+				  case 1:
+					  mode_route(x_touch, y_touch, 1);
+					  break;
 			  }
 		  }
 	  } else { // if the screen is not touched
-		  // set all arrow status to RELEASED if they are PRESSED
-		  if (arrow_status[0] == PRESSED) {
-			  draw_arrow(WHITE, RIGHT);
-			  arrow_status[0] = RELEASED;
+		  //TODO debounce
+		  GPIO_PinState start = HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin);
+		  if(start == GPIO_PIN_RESET)
+		  {
+			HAL_Delay(35);
+			GPIO_PinState after = HAL_GPIO_ReadPin(KEY0_GPIO_Port, KEY0_Pin);
+			if(after == GPIO_PIN_RESET){
+			  if (start_point == 1){
+				  start_point = 2;
+				  sprintf(DATA_TO_SEND, "start setted\n");
+				  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			  }else if (end_point == 1){
+				  end_point = 2;
+				  sprintf(DATA_TO_SEND, "end setted\n");
+				  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			  }else if (trap_point == 1){
+				  trap_point = 0;//cause more than one trap to set
+				  sprintf(DATA_TO_SEND, "trap setted\n");
+				  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			  }else if (control == 1){
+				  control = 0;//reset to choose s/e/t mode
+				  sprintf(DATA_TO_SEND, "route setted\n");
+				  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			  }
+			}
 		  }
-		  if (arrow_status[1] == PRESSED) {
-			  draw_arrow(WHITE, DOWN);
-			  arrow_status[1] = RELEASED;
+		  start = HAL_GPIO_ReadPin(KEY1_GPIO_Port, KEY1_Pin);
+		  if(start == GPIO_PIN_RESET)
+		  {
+			HAL_Delay(35);
+			GPIO_PinState after = HAL_GPIO_ReadPin(KEY1_GPIO_Port, KEY1_Pin);
+			if(after == GPIO_PIN_RESET){
+			  move_signal = 1;
+			  sprintf(DATA_TO_SEND, "moving!\n");
+			  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			}
 		  }
-		  if (arrow_status[2] == PRESSED) {
-			  draw_arrow(WHITE, LEFT);
-			  arrow_status[2] = RELEASED;
+		  //KEY_WKUP
+		  start = HAL_GPIO_ReadPin(KEY_WKUP_GPIO_Port, KEY_WKUP_Pin);
+		  if(start == GPIO_PIN_SET)
+		  {
+			HAL_Delay(35);
+			GPIO_PinState after = HAL_GPIO_ReadPin(KEY_WKUP_GPIO_Port,KEY_WKUP_Pin);
+			if(after == GPIO_PIN_SET){
+				for (int i = 0; i < 16; i++) {
+					path[i] = -1;
+				}
+				last_x = -1;
+				last_y = -1;
+				for(int i = 0; i < 4; i++){
+					for(int j = 0; j < 4; j++){
+						int index = (4*j) + i;
+						if(grid_status[index] == 1){
+							grid_status[index] = 0;
+							//0 up / 1 down / 2 left / 3 right
+							lcd_fill( 20+(50*i), 10+(50*j), 20+(50*i)+50, 10+(50*j)+50, WHITE);
+							//lcd_draw_rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
+							lcd_draw_rectangle(20+(50*i), 10+(50*j), 20+(50*i)+50, 10+(50*j)+50, BLACK);
+						}else if(grid_status[index] == 2 || grid_status[index] == 3){
+							lcd_fill( 20+(50*i), 10+(50*j), 20+(50*i)+50, 10+(50*j)+50, WHITE);
+							//lcd_draw_rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
+							lcd_draw_rectangle(20+(50*i), 10+(50*j), 20+(50*i)+50, 10+(50*j)+50, BLACK);
+							lcd_update_endpoint(i, j);
+						}
+					}
+				}
+				sprintf(DATA_TO_SEND, "clear route\n");
+				HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			}
 		  }
-		  if (arrow_status[3] == PRESSED) {
-			  draw_arrow(WHITE, UP);
-			  arrow_status[3] = RELEASED;
+
+		  switch(mode){
+			  case 0:
+				  mode_control(x_touch, y_touch, 0);
+				  break;
+			  case 1:
+				  mode_route(x_touch, y_touch, 0);
+				  break;
 		  }
-		  // send BRAKE command to the car board if BRAKE has not been sent
-		  if (command[0] != BRAKE) {
-			  HAL_Delay(100);
-			  command[0] = BRAKE;
-			  NRF24L01_TxPacket(command);
-		  }
+
 	  }
 	  t++;
 	  if (t == 15000) {
@@ -226,6 +265,7 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+
 /**
   * @brief System Clock Configuration
   * @retval None

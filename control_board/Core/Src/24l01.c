@@ -124,6 +124,7 @@ uint8_t NRF24L01_Write_Buf(uint8_t reg, uint8_t *pBuf, uint8_t len)
 //启动NRF24L01发送一次数据
 //txbuf:待发送数据首地址
 //返回值:发送完成状况
+//发送
 uint8_t NRF24L01_TxPacket(uint8_t *txbuf)
 {
 	uint8_t sta;
@@ -151,6 +152,7 @@ uint8_t NRF24L01_TxPacket(uint8_t *txbuf)
 //启动NRF24L01接收一次数据
 //rxbuf:待接收数据首地址
 //返回值:0，接收完成；其他，错误代码
+//接收
 uint8_t NRF24L01_RxPacket(uint8_t *rxbuf)
 {
 	uint8_t sta;
@@ -168,6 +170,7 @@ uint8_t NRF24L01_RxPacket(uint8_t *rxbuf)
 //该函数初始化NRF24L01到RX模式
 //设置RX地址,写RX数据宽度,选择RF频道,波特率和LNA HCURR
 //当CE变高后,即进入RX模式,并可以接收数据了
+//接收
 void NRF24L01_RX_Mode(void)
 {
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
@@ -187,6 +190,7 @@ void NRF24L01_RX_Mode(void)
 //PWR_UP,CRC使能
 //当CE变高后,即进入RX模式,并可以接收数据了
 //CE为高大于10us,则启动发送.
+//发送
 void NRF24L01_TX_Mode(void)
 {														 
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);

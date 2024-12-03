@@ -460,7 +460,8 @@ void lcd_draw_point(uint16_t x, uint16_t y, uint32_t color)
     lcd_wr_data(color);
 }
 
-//void lcd_fast_draw_point(uint16_t x, uint16_t y, uint32_t color) {
+//void lcd_fast_draw_point(uint16_t x, uint16_t y, uint32_t color)
+//{
 //	// lcd_set_cursor (for 7789 only)
 //    LCD_RS(0);
 //    LCD_CS(0);

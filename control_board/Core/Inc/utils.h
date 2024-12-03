@@ -23,6 +23,12 @@
 #define SPIN_RIGHT 6
 #define BRAKE 7
 
+// Commands for routing
+#define ROUTE_UP 8
+#define ROUTE_DOWN 9
+#define ROUTE_LEFT 10
+#define ROUTE_RIGHT 11
+
 void HAL_Delay_us(uint32_t us);
 
 void test_communication();
@@ -33,4 +39,22 @@ void draw_arrow(uint32_t color, uint8_t direction);
 
 void draw_mode_selection_panel();
 
+void LCD_ShowPicture(uint16_t x,uint16_t y,uint16_t column,uint16_t row,unsigned short *pic);
+
 void lcd_show_image(uint16_t x, uint16_t y, const uint8_t* image, uint8_t direction);
+
+void draw_stop_black();
+
+void draw_stop_red();
+
+void draw_left_spin_black();
+
+void draw_left_spin_red();
+
+void draw_right_spin_black();
+
+void draw_right_spin_red();
+
+void lcd_grid();
+
+void mode_control(uint16_t x_touch, uint16_t y_touch, int touched);
