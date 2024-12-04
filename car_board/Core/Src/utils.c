@@ -64,51 +64,56 @@ void process_command(uint8_t command[]) {
 	switch (command[0]) {
 		case MOVE_FORWARD:
 			car_run(55);
-//			TURN_ON_BUZZER;
-//			HAL_Delay(5000);
-//			TURN_OFF_BUZZER;
 			HAL_Delay(500);
 			car_brake();
 			break;
 		case MOVE_BACKWARD:
 			car_run(-55);
-//			TURN_ON_BUZZER;
-//			HAL_Delay(500);
-//			TURN_OFF_BUZZER;
-//			HAL_Delay(500);
-//			TURN_ON_BUZZER;
-//			HAL_Delay(500);
-//			TURN_OFF_BUZZER;
 			HAL_Delay(500);
 			car_brake();
 			break;
 		case MOVE_LEFT:
 			car_move_left(55);
-//			TURN_ON_LED1;
-//			HAL_Delay(500);
-//			TURN_OFF_LED1;
 			HAL_Delay(500);
 			car_brake();
 			break;
 		case MOVE_RIGHT:
 			car_move_right(55);
-//			TURN_ON_LED1;
-//			HAL_Delay(500);
-//			TURN_OFF_LED1;
-//			HAL_Delay(500);
-//			TURN_ON_LED1;
-//			HAL_Delay(500);
-//			TURN_OFF_LED1;
 			HAL_Delay(500);
 			car_brake();
 			break;
 		case BRAKE:
 			car_brake();
-//			TURN_ON_BUZZER;
-//			HAL_Delay(500);
-//			TURN_OFF_BUZZER;
 			break;
-		default: // Invalid command
+		default:
+			for (uint8_t i = 0; i < 16; i++) {
+				if (command[i] == -1) {
+					break;
+				}
+				switch (command[i]) {
+					case ROUTE_UP:
+						car_run(80);
+						HAL_Delay(600);
+						car_brake();
+						break;
+					case ROUTE_DOWN:
+						car_run(-80);
+						HAL_Delay(600);
+						car_brake();
+						break;
+					case ROUTE_LEFT:
+						car_move_left(80);
+						HAL_Delay(600);
+						car_brake();
+						break;
+					case ROUTE_RIGHT:
+						car_move_right(80);
+						HAL_Delay(600);
+						car_brake();
+						break;
+				}
+				HAL_Delay(500);
+			}
 			break;
 	}
 }

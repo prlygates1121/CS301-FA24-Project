@@ -38,6 +38,12 @@
 #define SPIN_RIGHT 6
 #define BRAKE 7
 
+// Commands for routing
+#define ROUTE_UP 8
+#define ROUTE_DOWN 9
+#define ROUTE_LEFT 10
+#define ROUTE_RIGHT 11
+
 extern float US_distance;
 
 /* --------------------------------------------- Custom Delay ---------------------------------------------- */

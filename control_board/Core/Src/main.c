@@ -122,20 +122,20 @@ int main(void)
 //  HAL_UART_Receive_IT(&huart1, (uint8_t *)rxBuffer, 1);
   lcd_init();
   tp_dev.init();
-//  NRF24L01_Init();
+  NRF24L01_Init();
 
   // Checking NRF24L01 hardware
-//  while (NRF24L01_Check()) {
-//		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
-//		HAL_Delay(200);
-//		lcd_fill(30, 130, 239, 130+16, WHITE);
-//		HAL_Delay(200);
-//  }
+  while (NRF24L01_Check()) {
+		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
+		HAL_Delay(200);
+		lcd_fill(30, 130, 239, 130+16, WHITE);
+		HAL_Delay(200);
+  }
 
   // Testing data transmission to/from the car board
-//  test_communication();
+  test_communication();
 
-//  NRF24L01_TX_Mode();
+  NRF24L01_TX_Mode();
   uint8_t command[32];
 
   draw_mode_selection_panel();
