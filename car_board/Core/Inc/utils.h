@@ -56,7 +56,7 @@ void set_joint_angle(float angle);
 
 /* -------------------------------------- Ultrasonic Sensor Functions -------------------------------------- */
 
-uint16_t UT_get_distance();
+uint16_t get_distance();
 
 /* ---------------------------------------- Communication Functions ---------------------------------------- */
 

@@ -44,10 +44,10 @@ void NRF24L01_Init(void)
     GPIO_Initure.Pin = GPIO_PIN_4;			//PC4
     HAL_GPIO_Init(GPIOC, &GPIO_Initure);     //初始化
 	
-	//PA1上拉输入
-	GPIO_Initure.Pin=GPIO_PIN_1;			//PA1
-	GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
-	HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
+//	//PA1上拉输入
+//	GPIO_Initure.Pin=GPIO_PIN_1;			//PA1
+//	GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
+//	HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
 	
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_1,GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);

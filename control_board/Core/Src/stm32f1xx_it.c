@@ -22,6 +22,8 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "24l01.h"
+#include "lcd_v4.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,7 +60,9 @@
 extern SPI_HandleTypeDef hspi1;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
-
+extern uint8_t distance;
+extern uint8_t display_distance;
+extern uint8_t nrf_rx_buf[32];
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -200,17 +204,17 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles EXTI line2 interrupt.
+  * @brief This function handles EXTI line1 interrupt.
   */
-void EXTI2_IRQHandler(void)
+void EXTI1_IRQHandler(void)
 {
-  /* USER CODE BEGIN EXTI2_IRQn 0 */
+  /* USER CODE BEGIN EXTI1_IRQn 0 */
 
-  /* USER CODE END EXTI2_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(MX_nRF24_IRQ_Pin);
-  /* USER CODE BEGIN EXTI2_IRQn 1 */
+  /* USER CODE END EXTI1_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(NRF_IRQ_Pin);
+  /* USER CODE BEGIN EXTI1_IRQn 1 */
 
-  /* USER CODE END EXTI2_IRQn 1 */
+  /* USER CODE END EXTI1_IRQn 1 */
 }
 
 /**
@@ -242,5 +246,26 @@ void USART1_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == NRF_IRQ_Pin) {
+		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+		uint8_t sta = NRF24L01_Read_Reg(STATUS);
+		if (sta & RX_OK)
+		{
+			NRF24L01_Read_Buf(RD_RX_PLOAD, nrf_rx_buf, RX_PLOAD_WIDTH);
+			NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS, sta);
+			NRF24L01_Write_Reg(FLUSH_RX, 0xff);
+			switch (nrf_rx_buf[0]) {
+				// nrf_rx_buf[0] == 0 suggests that distance info is received
+				case 0:
+					// nrf_rx_buf[1] holds the distance value
+					distance = nrf_rx_buf[1];
+					display_distance = 1;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+}
 /* USER CODE END 1 */

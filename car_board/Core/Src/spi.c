@@ -118,28 +118,28 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 }
 
 /* USER CODE BEGIN 1 */
-//SPIËÙ¶ÈÉèÖÃº¯Êý
-//SPIËÙ¶È=fAPB1/·ÖÆµÏµÊý
+//SPIï¿½Ù¶ï¿½ï¿½ï¿½ï¿½Ãºï¿½ï¿½ï¿½
+//SPIï¿½Ù¶ï¿½=fAPB1/ï¿½ï¿½ÆµÏµï¿½ï¿½
 //@ref SPI_BaudRate_Prescaler:SPI_BAUDRATEPRESCALER_2~SPI_BAUDRATEPRESCALER_2 256
-//fAPB1Ê±ÖÓÒ»°ãÎª42Mhz£º
+//fAPB1Ê±ï¿½ï¿½Ò»ï¿½ï¿½Îª42Mhzï¿½ï¿½
 void SPI1_SetSpeed(uint8_t SPI_BaudRatePrescaler)
 {
-    assert_param(IS_SPI_BAUDRATE_PRESCALER(SPI_BaudRatePrescaler));//ÅÐ¶ÏÓÐÐ§ÐÔ
-    __HAL_SPI_DISABLE(&hspi1);            //¹Ø±ÕSPI
-    hspi1.Instance->CR1&=0XFFC7;          //Î»3-5ÇåÁã£¬ÓÃÀ´ÉèÖÃ²¨ÌØÂÊ
-    hspi1.Instance->CR1|=SPI_BaudRatePrescaler;//ÉèÖÃSPIËÙ¶È
-    __HAL_SPI_ENABLE(&hspi1);             //Ê¹ÄÜSPI
+    assert_param(IS_SPI_BAUDRATE_PRESCALER(SPI_BaudRatePrescaler));//ï¿½Ð¶ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
+    __HAL_SPI_DISABLE(&hspi1);            //ï¿½Ø±ï¿½SPI
+    hspi1.Instance->CR1&=0XFFC7;          //Î»3-5ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½
+    hspi1.Instance->CR1|=SPI_BaudRatePrescaler;//ï¿½ï¿½ï¿½ï¿½SPIï¿½Ù¶ï¿½
+    __HAL_SPI_ENABLE(&hspi1);             //Ê¹ï¿½ï¿½SPI
 
 }
 
-//SPI1 ¶ÁÐ´Ò»¸ö×Ö½Ú
-//TxData:ÒªÐ´ÈëµÄ×Ö½Ú
-//·µ»ØÖµ:¶ÁÈ¡µ½µÄ×Ö½Ú
+//SPI1 ï¿½ï¿½Ð´Ò»ï¿½ï¿½ï¿½Ö½ï¿½
+//TxData:ÒªÐ´ï¿½ï¿½ï¿½ï¿½Ö½ï¿½
+//ï¿½ï¿½ï¿½ï¿½Öµ:ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½
 uint8_t SPI1_ReadWriteByte(uint8_t TxData)
 {
 	uint8_t Rxdata;
     HAL_SPI_TransmitReceive(&hspi1,&TxData,&Rxdata,1, 1000);
- 	return Rxdata;          		    //·µ»ØÊÕµ½µÄÊý¾Ý
+ 	return Rxdata;          		    //ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
 /* USER CODE END 1 */

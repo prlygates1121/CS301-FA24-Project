@@ -48,7 +48,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t rx_buf[32] = {0};
+const uint32_t interval_millis = 200;
+uint32_t current_millis = 0;
+uint8_t nrf_rx_buf[32] = {0};
+uint8_t nrf_tx_buf[32] = {0};
 uint8_t command_ready = 0;
 
 /* USER CODE END PV */
@@ -108,7 +111,9 @@ int main(void)
   TURN_OFF_BUZZER;
   car_brake();
   NRF24L01_Init();
-  // Check if NRF24L01 module is
+  // Adjust servo
+  set_joint_angle(82);
+  // Check if NRF24L01 module is working
   while (NRF24L01_Check()) {
 	  HAL_Delay(100);
 	  TURN_ON_LED1;
@@ -118,8 +123,8 @@ int main(void)
   // Test communication with the control board
   test_communication();
 
-
   NRF24L01_RX_Mode();
+  command_ready = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -127,8 +132,16 @@ int main(void)
 while (1)
   {
 	if (command_ready) {
-		process_command(rx_buf);
+		process_command(nrf_rx_buf);
 		command_ready = 0;
+	}
+	if (HAL_GetTick() - current_millis >= interval_millis) {
+		nrf_tx_buf[0] = 0;
+		nrf_tx_buf[1] = get_distance();
+		NRF24L01_TX_Mode();
+		NRF24L01_TxPacket(nrf_tx_buf);
+		NRF24L01_RX_Mode();
+		current_millis = HAL_GetTick();
 	}
     /* USER CODE END WHILE */
 

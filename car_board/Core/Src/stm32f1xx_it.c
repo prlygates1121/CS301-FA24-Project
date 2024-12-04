@@ -59,7 +59,7 @@ float US_distance;
 
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim2;
-extern uint8_t rx_buf[32];
+extern uint8_t nrf_rx_buf[32];
 extern uint8_t command_ready;
 /* USER CODE END EV */
 
@@ -231,9 +231,8 @@ void EXTI2_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	TOGGLE_LED1;
 	HAL_Delay_us(10);
-	if (0) {
+	if (GPIO_Pin == US_STATUS_Pin) {
 		// Set TIM2 counter to 0
 		__HAL_TIM_SET_COUNTER(&htim2, 0);
 		// Start counter
@@ -248,7 +247,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		uint8_t sta = NRF24L01_Read_Reg(STATUS);
 		if (sta & RX_OK)
 		{
-			NRF24L01_Read_Buf(RD_RX_PLOAD, rx_buf, RX_PLOAD_WIDTH);
+			NRF24L01_Read_Buf(RD_RX_PLOAD, nrf_rx_buf, RX_PLOAD_WIDTH);
 			NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS, sta);
 			NRF24L01_Write_Reg(FLUSH_RX, 0xff);
 			command_ready = 1;

@@ -70,6 +70,9 @@ int trap_point = 0;//0:empty 1:choosed 2:setted
 int move_signal = 0;//0:still 1:move
 int control = 0;//0:empty 1:choosed 2:setted
 int debounceLabel = 0;//0:没按过 1:第一次按了
+uint8_t distance = 0;
+uint8_t display_distance = 0;
+uint8_t nrf_rx_buf[32];
 
 /* USER CODE END PV */
 
@@ -135,8 +138,9 @@ int main(void)
   // Testing data transmission to/from the car board
   test_communication();
 
-  NRF24L01_TX_Mode();
-  uint8_t command[32];
+//  lcd_show_string(20, 20, 200, 16, 16, "Distance:", BLUE);
+
+  NRF24L01_RX_Mode();
 
   draw_mode_selection_panel();
   draw_control_panel();
@@ -258,6 +262,12 @@ int main(void)
 	  if (t == 15000) {
 		  t = 0;
 		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  }
+	  // Display distance
+	  if (display_distance) {
+		  lcd_fill(0, 0, 24, 16, WHITE);
+		  lcd_show_num(0, 0, distance, 3, 16, BLUE);
+		  display_distance = 0;
 	  }
     /* USER CODE END WHILE */
 
