@@ -102,6 +102,7 @@ void draw_control_panel() {
 	}else if (mode == 2){
 		lcd_fill(0, 0, 240, 288, WHITE);
 		lcd_grid();
+		lcd_button();
 	}
 
 }
@@ -388,7 +389,7 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 
 void mode_route(uint16_t x_touch, uint16_t y_touch, int touched){
 	if (touched){
-		//screen is touched
+		// screen is touched
 		// button panel
 		if (x_touch > 10 && x_touch < 57 && y_touch > 230 && y_touch < 270){
 			//start point  endpoint
@@ -445,7 +446,7 @@ void mode_route(uint16_t x_touch, uint16_t y_touch, int touched){
 						}else{
 							if (HAL_GetTick() - debounceTime > 100){
 								debounceLabel = 0;
-								if (start_point == 1){
+								if (start_point == 1){// 按下start
 									grid_status[index] = 2;
 									LCD_ShowPicture(20+(50*x_index)+2, 10+(50*y_index)+2, 40, 45, endpoint);
 									sprintf(DATA_TO_SEND, "start press\n");
@@ -572,6 +573,187 @@ void mode_route(uint16_t x_touch, uint16_t y_touch, int touched){
 
 	}
 }
+
+
+
+
+uint8_t start_selecting = 0;
+uint8_t end_selecting = 0;
+uint8_t start_selected = 0;
+uint8_t end_selected = 0;
+
+
+int ground[4][4] = {
+    {0, 1, 0, 0},
+    {0, 1, 1, 0},
+    {0, 1, 0, 0},
+    {0, 0, 0, 1},
+};
+int graph[4][4] = {
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+};
+
+int start[2];
+int end[2];
+int point[2];
+int total_obstacle = 5;
+int obstacle_cnt = 0;
+int clear_cnt = 0;
+int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},};
+uint8_t next_step[4] = {0, 0, 0, 0};
+void detect(int x, int y) { //模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
+	for(int i=0; i<4; i++) {
+		next_step[i] = 0;
+		int x_d = x + step[i][0];
+		int y_d = y + step[i][1];
+		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
+			//越界
+			continue;
+		}
+		if (!graph[x_d][y_d]) {
+			//没探测过
+			if (ground[x_d][y_d]) {
+				//有障碍
+				graph[x_d][y_d] = 1;
+				obstacle_cnt++;
+			} else {
+				//无障碍
+				graph[x_d][y_d] = 2;
+				clear_cnt++;
+				next_step[i] = 1;
+			}
+		}
+	}
+}
+uint8_t dfs(int x, int y) {
+	uint8_t to_end = 0; //是否能到终点
+	detect(x, y);
+	for (int i=0; i<4; i++) {
+		if (next_step[i]) {
+			//可以走
+			point[0] = x + step[i][0];
+			point[1] = y + step[i][1];
+			if (dfs(point[0], point[1])) {
+				to_end = 1;
+			}
+			point[0] = x;
+			point[1] = y;
+		}
+	}
+	to_end |= (x == end[0]) && (y == end[1]);
+	if ((x == end[0]) && (y == end[1])) {
+		if (obstacle_cnt == total_obstacle) {
+			//到终点时找全了
+			for (int x_show=0; x_show<4; x_show++) {
+				for (int y_show=0; y_show<4; y_show++) {
+					if (graph[x_show][y_show] == 1) {
+						LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
+					}
+				}
+			}
+			HAL_Delay(100000);
+		} else if (clear_cnt == 12) {
+			//到终点时找全了
+			for (int i=0; i<4; i++) {
+				for (int j=0; j<4; j++) {
+					if (!graph[i][j]) {
+						graph[i][j] = 1;
+					}
+				}
+			}
+			for (int x_show=0; x_show<4; x_show++) {
+				for (int y_show=0; y_show<4; y_show++) {
+					if (graph[x_show][y_show] == 1) {
+						LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
+					}
+				}
+			}
+			HAL_Delay(100000);
+		}
+	}
+	if (to_end) {
+		graph[x][y] = 3;
+	}
+	return to_end;
+}
+
+void go_through(int x, int y) {
+	for (int i=0; i<4; i++) { //实操改为探测前、左、右
+		int x_d = x + step[i][0];
+		int y_d = y + step[i][1];
+		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
+			//越界
+			continue;
+		}
+		if (graph[x_d][y_d] == 3) {
+			graph[x][y] = 4;
+			point[0] = x_d;
+			point[1] = y_d;
+			if (x_d == end[0] && y_d == end[1]) {
+				if (obstacle_cnt != total_obstacle) {
+					for (int k=0; k<4; k++) {
+						for (int j=0; j<4; j++) {
+							if (!graph[k][j]) {
+								graph[k][j] = 1;
+							}
+						}
+					}
+				}
+				for (int x_show=0; x_show<4; x_show++) {
+					for (int y_show=0; y_show<4; y_show++) {
+						if (graph[x_show][y_show] == 1) {
+							LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
+						}
+					}
+				}
+				HAL_Delay(100000);
+			} else {
+				go_through(x_d, y_d);
+			}
+		}
+	}
+}
+
+void mode_auto(uint16_t x_touch, uint16_t y_touch) {
+	int x_index, y_index, grid_index;
+	if (x_touch > 10 && x_touch < 57 && y_touch > 230 && y_touch < 270){
+		start_selected = 0;
+		start_selecting = 1;
+		end_selecting = 0;
+	}else if (x_touch > 67 && x_touch < 114 && y_touch > 230 && y_touch < 270){
+		end_selected = 0;
+		start_selecting = 0;
+		end_selecting = 1;
+	}else if (x_touch > 20 && x_touch < 220 && y_touch > 20 && y_touch < 220) {
+		x_index = (x_touch-20) / 50;
+		y_index = (y_touch-20) / 50;
+		grid_index = (4*y_index) + x_index;
+		if (start_selecting) {
+			LCD_ShowPicture(20+(50*x_index)+2, 10+(50*y_index)+2, 40, 45, endpoint);
+			start_selecting = 0;
+			start[0] = x_index;
+			start[1] = y_index;
+			point[0] = x_index;
+			point[1] = y_index;
+			start_selected = 1;
+		} else if (end_selecting) {
+			LCD_ShowPicture(20+(50*x_index)+2, 10+(50*y_index)+2, 40, 45, endpoint);
+			end_selecting = 0;
+			end[0] = x_index;
+			end[1] = y_index;
+			end_selected = 1;
+		}
+	}else if (start_selected && end_selected && x_touch > 181 && x_touch < 228 && y_touch > 230 && y_touch < 270){ //开始寻路
+		graph[start[0]][start[1]] = 2;
+		dfs(start[0], start[1]);
+		go_through(start[0], start[1]);
+	}
+}
+
+
 
 void draw_mode_selection_panel() {
 	// draw the mode selection panel
