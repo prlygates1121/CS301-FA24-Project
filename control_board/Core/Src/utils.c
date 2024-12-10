@@ -558,6 +558,7 @@ void mode_route(uint16_t x_touch, uint16_t y_touch, int touched){
 //				  }
 				  NRF24L01_TX_Mode();
 				  while (NRF24L01_TxPacket(path) != TX_OK);
+				  NRF24L01_RX_Mode();
 				  sprintf(DATA_TO_SEND, "Path Sent\n");
 				  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 				  lcd_grid();

@@ -20,11 +20,11 @@ void set_joint_angle(float angle)
 
 /* ------------------------------------- Ultrasonic Sensor Functions ------------------------------------- */
 
-uint16_t UT_get_distance() {
+uint16_t get_distance() {
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_SET);
 	HAL_Delay_us(20);
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_RESET);
-	return US_distance * 10;
+	return US_distance * 2;
 }
 
 /* --------------------------------------- Communication Functions --------------------------------------- */

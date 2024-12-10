@@ -77,9 +77,9 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define KEY_WKUP_Pin GPIO_PIN_0
 #define KEY_WKUP_GPIO_Port GPIOA
-#define MX_nRF24_IRQ_Pin GPIO_PIN_2
-#define MX_nRF24_IRQ_GPIO_Port GPIOA
-#define MX_nRF24_IRQ_EXTI_IRQn EXTI2_IRQn
+#define NRF_IRQ_Pin GPIO_PIN_1
+#define NRF_IRQ_GPIO_Port GPIOA
+#define NRF_IRQ_EXTI_IRQn EXTI1_IRQn
 #define MX_nRF24_CE_Pin GPIO_PIN_3
 #define MX_nRF24_CE_GPIO_Port GPIOA
 #define MX_nRF24_CEA4_Pin GPIO_PIN_4
