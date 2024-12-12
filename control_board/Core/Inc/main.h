@@ -39,7 +39,7 @@ extern "C" {
 extern int mode;
 extern uint8_t arrow_status[7];
 extern uint8_t grid_status[16];
-extern uint8_t path[16];
+extern uint8_t path[32];
 extern int pnt;
 extern uint32_t lastTime;
 extern uint32_t time_threshold;

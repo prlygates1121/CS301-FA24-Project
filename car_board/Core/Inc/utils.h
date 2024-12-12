@@ -44,6 +44,19 @@
 #define ROUTE_LEFT 10
 #define ROUTE_RIGHT 11
 
+// Commands for turning servo joint
+#define SERVO_AHEAD 12
+#define SERVO_LEFT 13
+#define SERVO_RIGHT 14
+
+#define TURN_AROUND_RIGHT 15
+#define TURN_AROUND_LEFT 16
+
+// Joint Angles
+#define AHEAD 0
+#define LEFT 1
+#define RIGHT 2
+
 extern float US_distance;
 
 /* --------------------------------------------- Custom Delay ---------------------------------------------- */
@@ -54,9 +67,11 @@ void HAL_Delay_us(uint32_t us);
 
 void set_joint_angle(float angle);
 
+void turn_joint(uint8_t direction);
+
 /* -------------------------------------- Ultrasonic Sensor Functions -------------------------------------- */
 
-uint16_t get_distance();
+uint8_t get_distance();
 
 /* ---------------------------------------- Communication Functions ---------------------------------------- */
 

@@ -55,7 +55,7 @@
 uint8_t arrow_status[7] = {RELEASED};//5 stop 6 le 7 ri
 int mode = 1;//0: control   1:draw   2:auto
 uint8_t grid_status[16] = {0};
-uint8_t path[16] = {-1};
+uint8_t path[32] = {-1};
 int pnt = 0;
 uint32_t lastTime = 0;
 uint32_t debounceTime = -1;
@@ -128,15 +128,15 @@ int main(void)
   NRF24L01_Init();
 
   // Checking NRF24L01 hardware
-//  while (NRF24L01_Check()) {
-//		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
-//		HAL_Delay(200);
-//		lcd_fill(30, 130, 239, 130+16, WHITE);
-//		HAL_Delay(200);
-//  }
+  while (NRF24L01_Check()) {
+		lcd_show_string(30, 130, 200, 16, 16, "NRF24L01 Error", RED);
+		HAL_Delay(200);
+		lcd_fill(30, 130, 239, 130+16, WHITE);
+		HAL_Delay(200);
+  }
 
   // Testing data transmission to/from the car board
-  //test_communication();
+  test_communication();
 
 //  lcd_show_string(20, 20, 200, 16, 16, "Distance:", BLUE);
 
@@ -148,8 +148,13 @@ int main(void)
   uint16_t t = 0;
   uint16_t x_touch, y_touch;
 
+  uint8_t nop[32];
+  for (uint8_t i = 0; i < 32; i++) {
+	  nop[i] = -1;
+  }
+
   //init
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 32; i++) {
       path[i] = -1;
   }
   /* USER CODE END 2 */
@@ -224,7 +229,7 @@ int main(void)
 			HAL_Delay(35);
 			GPIO_PinState after = HAL_GPIO_ReadPin(KEY_WKUP_GPIO_Port,KEY_WKUP_Pin);
 			if(after == GPIO_PIN_SET){
-				for (int i = 0; i < 16; i++) {
+				for (int i = 0; i < 32; i++) {
 					path[i] = -1;
 				}
 				last_x = -1;
@@ -267,10 +272,17 @@ int main(void)
 	  t++;
 	  if (t == 15000) {
 		  t = 0;
+		  // 时不时刷新一下，防止NRF24L01罢工
+		  uint8_t sta = NRF24L01_Read_Reg(STATUS);
+		  NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS, sta);
+		  NRF24L01_Write_Reg(FLUSH_TX,0xff);
+		  NRF24L01_Write_Reg(FLUSH_RX,0xff);
 		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 	  }
 	  // Display distance
 	  if (display_distance) {
+//		  sprintf(DATA_TO_SEND, "distance:%d\n", distance);
+//		  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 		  lcd_fill(0, 0, 24, 16, WHITE);
 		  lcd_show_num(0, 0, distance, 3, 16, BLUE);
 		  display_distance = 0;

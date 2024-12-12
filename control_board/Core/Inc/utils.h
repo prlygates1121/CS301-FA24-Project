@@ -29,9 +29,19 @@
 #define ROUTE_LEFT 10
 #define ROUTE_RIGHT 11
 
+// Commands for turning servo joint
+#define SERVO_AHEAD 12
+#define SERVO_LEFT 13
+#define SERVO_RIGHT 14
+
+#define TURN_AROUND_RIGHT 15
+#define TURN_AROUND_LEFT 16
+
 void HAL_Delay_us(uint32_t us);
 
 void test_communication();
+
+uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking);
 
 void draw_control_panel();
 
@@ -56,5 +66,7 @@ void draw_right_spin_black();
 void draw_right_spin_red();
 
 void lcd_grid();
+
+void lcd_button();
 
 void mode_control(uint16_t x_touch, uint16_t y_touch, int touched);

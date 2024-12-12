@@ -53,6 +53,8 @@
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 float US_distance;
+uint32_t US_time_out = 300;
+uint32_t US_time;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -60,6 +62,7 @@ float US_distance;
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim2;
 extern uint8_t nrf_rx_buf[32];
+extern uint8_t nrf_tx_buf[32];
 extern uint8_t command_ready;
 /* USER CODE END EV */
 
@@ -233,16 +236,25 @@ void EXTI2_IRQHandler(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	HAL_Delay_us(10);
 	if (GPIO_Pin == US_STATUS_Pin) {
+		uint8_t give_up = 0;
 		// Set TIM2 counter to 0
 		__HAL_TIM_SET_COUNTER(&htim2, 0);
 		// Start counter
 		__HAL_TIM_ENABLE(&htim2);
 		// Waiting for ultrasonic pulses to be sent back
-		while (US_NOT_RECEIVED);
+		while (1) {
+			if (US_NOT_RECEIVED == 0) {
+				break;
+			}
+		}
 		// Stop counter
 		__HAL_TIM_DISABLE(&htim2);
 		// Get the elapsed time
-		US_distance = __HAL_TIM_GET_COUNTER(&htim2) * 5 * 34 / 200.0;
+		if (give_up) {
+			US_distance = 255;
+		} else {
+			US_distance = __HAL_TIM_GET_COUNTER(&htim2) * 5 * 34 / 200.0;
+		}
 	} else if (GPIO_Pin == NRF_IRQ_Pin) {
 		uint8_t sta = NRF24L01_Read_Reg(STATUS);
 		if (sta & RX_OK)

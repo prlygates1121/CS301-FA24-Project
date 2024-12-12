@@ -48,7 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-const uint32_t interval_millis = 200;
+const uint32_t interval_millis = 500;
 uint32_t current_millis = 0;
 uint8_t nrf_rx_buf[32] = {0};
 uint8_t nrf_tx_buf[32] = {0};
@@ -112,7 +112,9 @@ int main(void)
   car_brake();
   NRF24L01_Init();
   // Adjust servo
-  set_joint_angle(82);
+  turn_joint(AHEAD);
+
+
   // Check if NRF24L01 module is working
   while (NRF24L01_Check()) {
 	  HAL_Delay(100);
@@ -136,8 +138,10 @@ while (1)
 		command_ready = 0;
 	}
 	if (HAL_GetTick() - current_millis >= interval_millis) {
+		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		uint8_t distance_fetched = get_distance();
 		nrf_tx_buf[0] = 0;
-		nrf_tx_buf[1] = get_distance();
+		nrf_tx_buf[1] = distance_fetched;
 		NRF24L01_TX_Mode();
 		NRF24L01_TxPacket(nrf_tx_buf);
 		NRF24L01_RX_Mode();

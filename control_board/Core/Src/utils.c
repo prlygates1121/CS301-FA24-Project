@@ -7,6 +7,8 @@
 #include "main.h"
 #include "stdbool.h"
 
+extern uint8_t distance;
+
 void HAL_Delay_us(uint32_t us) {
 	__HAL_TIM_SET_COUNTER(&htim1, 0);
 	while (__HAL_TIM_GET_COUNTER(&htim1) < us);
@@ -56,6 +58,19 @@ void test_communication() {
 			}
 		}
 	}
+}
+
+uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking) {
+	uint8_t return_val;
+	NRF24L01_TX_Mode();
+	if (blocking == 0) {
+		return_val = NRF24L01_TxPacket(txbuf);
+	} else {
+		while (NRF24L01_TxPacket(txbuf) != TX_OK);
+		return_val = TX_OK;
+	}
+	NRF24L01_RX_Mode();
+	return return_val;
 }
 
 //lcd_draw_point(uint16_t x, uint16_t y, uint32_t color)
@@ -247,14 +262,15 @@ void mode_switch_panel(uint16_t x_touch, uint16_t y_touch){
 }
 
 void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
+	uint8_t command[32] = {0};
 	if(touched){
 		//screen being touched
 		//stop
 		  if (x_touch > 86 && x_touch < 156 && y_touch > 100 && y_touch < 170){
 			  if (arrow_status[4] == RELEASED){
 				  draw_stop_red();
-				  //TODO command[0] = MOVE_RIGHT;
-				  //NRF24L01_TxPacket(command);
+				  command[0] = MOVE_RIGHT;
+				  nrf_send(command, 0);
 				  arrow_status[4] = PRESSED;
 			  }
 		  } else {
@@ -267,8 +283,8 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 		  if (x_touch > 20 && x_touch < 90 && y_touch > 35 && y_touch < 105){
 			  if (arrow_status[5] == RELEASED){
 				  draw_left_spin_red();
-				  //TODO command[0] = MOVE_RIGHT;
-				  //NRF24L01_TxPacket(command);
+				  command[0] = SPIN_LEFT;
+				  nrf_send(command, 0);
 				  arrow_status[5] = PRESSED;
 			  }
 		  } else {
@@ -281,8 +297,8 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 		  if (x_touch > 150 && x_touch < 220 && y_touch > 35 && y_touch < 105){
 			  if (arrow_status[6] == RELEASED){
 				  draw_right_spin_red();
-				  //TODO command[0] = MOVE_RIGHT;
-				  //NRF24L01_TxPacket(command);
+				  command[0] = SPIN_RIGHT;
+				  nrf_send(command, 0);
 				  arrow_status[6] = PRESSED;
 			  }
 		  } else {
@@ -295,8 +311,8 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 		  if (x_touch > 150 && x_touch < 220 && y_touch > 100 && y_touch < 170) {
 			  if (arrow_status[0] == RELEASED) {
 				  draw_arrow(BLACK, RIGHT);
-//				  command[0] = MOVE_RIGHT;
-//					  NRF24L01_TxPacket(command);
+				  command[0] = MOVE_RIGHT;
+				  nrf_send(command, 0);
 				  arrow_status[0] = PRESSED;
 			  }
 		  } else {
@@ -309,8 +325,8 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 		  if (x_touch > 86 && x_touch < 156 && y_touch > 165 && y_touch < 235) {
 			  if (arrow_status[1] == RELEASED) {
 				  draw_arrow(BLACK, DOWN);
-//				  command[0] = MOVE_BACKWARD;
-//					  NRF24L01_TxPacket(command);
+				  command[0] = MOVE_BACKWARD;
+				  nrf_send(command, 0);
 				  arrow_status[1] = PRESSED;
 			  }
 		  } else {
@@ -323,8 +339,8 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 		  if (x_touch > 20 && x_touch < 90 && y_touch > 100 && y_touch < 170) {
 			  if (arrow_status[2] == RELEASED) {
 				  draw_arrow(BLACK, LEFT);
-//				  command[0] = MOVE_LEFT;
-//					  NRF24L01_TxPacket(command);
+				  command[0] = MOVE_LEFT;
+				  nrf_send(command, 0);
 				  arrow_status[2] = PRESSED;
 			  }
 		  } else {
@@ -337,8 +353,8 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 		  if (x_touch > 86 && x_touch < 156 && y_touch > 35 && y_touch < 105) {
 			  if (arrow_status[3] == RELEASED) {
 				  draw_arrow(BLACK, UP);
-//				  command[0] = MOVE_FORWARD;
-//					  NRF24L01_TxPacket(command);
+				  command[0] = MOVE_FORWARD;
+				  nrf_send(command, 0);
 				  arrow_status[3] = PRESSED;
 			  }
 		  } else {
@@ -556,14 +572,12 @@ void mode_route(uint16_t x_touch, uint16_t y_touch, int touched){
 //						  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 //					  }
 //				  }
-				  NRF24L01_TX_Mode();
-				  while (NRF24L01_TxPacket(path) != TX_OK);
-				  NRF24L01_RX_Mode();
+				  nrf_send(path, 1);
 				  sprintf(DATA_TO_SEND, "Path Sent\n");
 				  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 				  lcd_grid();
 				  pnt = 0;
-				  for (int i = 0; i < 16; i++) {
+				  for (int i = 0; i < 32; i++) {
 						path[i] = -1;
 				  }
 				  for (int i = 0; i < 16; i++) {
@@ -584,12 +598,12 @@ uint8_t start_selected = 0;
 uint8_t end_selected = 0;
 
 
-int ground[4][4] = {
-    {0, 1, 0, 0},
-    {0, 1, 1, 0},
-    {0, 1, 0, 0},
-    {0, 0, 0, 1},
-};
+//int ground[4][4] = {
+//    {0, 1, 0, 0},
+//    {0, 1, 1, 0},
+//    {0, 1, 0, 0},
+//    {0, 0, 0, 1},
+//};
 int graph[4][4] = {
     {0, 0, 0, 0},
     {0, 0, 0, 0},
@@ -599,13 +613,18 @@ int graph[4][4] = {
 
 int start[2];
 int end[2];
-int point[2];
+int point[2];											//小车坐标
 int total_obstacle = 5;
 int obstacle_cnt = 0;
 int clear_cnt = 0;
-int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},};
-uint8_t next_step[4] = {0, 0, 0, 0};
-void detect(int x, int y) { //模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
+int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},};	//右、左、后、前
+uint8_t next_step[4] = {0, 0, 0, 0}; 					//记录右、左、后、前是否可以走
+
+//模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
+void detect(int x, int y) {
+	HAL_Delay(4000);
+	uint8_t detect_command[32] = {0};
+	// 探测四个方向有无障碍
 	for(int i=0; i<4; i++) {
 		next_step[i] = 0;
 		int x_d = x + step[i][0];
@@ -614,29 +633,97 @@ void detect(int x, int y) { //模拟探路，实操改为探测前、左、右�
 			//越界
 			continue;
 		}
+		//没探测过
 		if (!graph[x_d][y_d]) {
-			//没探测过
-			if (ground[x_d][y_d]) {
+			switch (i) {
+				// 看右边
+				case 0:
+					detect_command[0] = SERVO_RIGHT;
+					nrf_send(detect_command, 0);
+					break;
+				// 看左边
+				case 1:
+					detect_command[0] = SERVO_LEFT;
+					nrf_send(detect_command, 0);
+					break;
+				// 转过头看后边
+				case 2:
+					detect_command[0] = TURN_AROUND_RIGHT;
+					nrf_send(detect_command, 0);
+					HAL_Delay(3000);
+					break;
+				// 看前边
+				case 3:
+					detect_command[0] = SERVO_AHEAD;
+					nrf_send(detect_command, 0);
+					break;
+				default:
+					break;
+			}
+			HAL_Delay(4000);
+			lcd_fill(200, 0, 224, 16, WHITE);
+			lcd_show_num(200, 0, distance, 3, 16, BLUE);
+			if (distance <= 90) {
 				//有障碍
 				graph[x_d][y_d] = 1;
+				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 38, 45, obstacle);
 				obstacle_cnt++;
 			} else {
 				//无障碍
 				graph[x_d][y_d] = 2;
+				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 39, 40, left_red);
 				clear_cnt++;
+				next_step[i] = 1;
+			}
+			if (i == 2) {
+				detect_command[0] = TURN_AROUND_LEFT;
+				nrf_send(detect_command, 0);
+				HAL_Delay(4000);
+			}
+		} else {
+			if (graph[x_d][y_d] == 1) {
 				next_step[i] = 1;
 			}
 		}
 	}
 }
+
 uint8_t dfs(int x, int y) {
+	uint8_t dfs_command[32] = {0};
 	uint8_t to_end = 0; //是否能到终点
 	detect(x, y);
+	Draw_Big_Point(20+(50*x)+2, 10+(50*y)+2, BLUE);
+	Draw_Big_Point(20+(50*x)+4, 10+(50*y)+4, BLUE);
 	for (int i=0; i<4; i++) {
 		if (next_step[i]) {
-			//可以走
+			//可以走，就走
 			point[0] = x + step[i][0];
 			point[1] = y + step[i][1];
+			switch (i) {
+				// 往右走一格
+				case 0:
+					dfs_command[0] = ROUTE_RIGHT;
+					nrf_send(dfs_command, 0);
+					break;
+				// 往左走一格
+				case 1:
+					dfs_command[0] = ROUTE_LEFT;
+					nrf_send(dfs_command, 0);
+					break;
+				// 往后走一格
+				case 2:
+					dfs_command[0] = ROUTE_DOWN;
+					nrf_send(dfs_command, 0);
+					break;
+				// 往前走一格
+				case 3:
+					dfs_command[0] = ROUTE_UP;
+					nrf_send(dfs_command, 0);
+					break;
+				default:
+					break;
+			}
+			HAL_Delay(3000);
 			if (dfs(point[0], point[1])) {
 				to_end = 1;
 			}
@@ -682,11 +769,11 @@ uint8_t dfs(int x, int y) {
 }
 
 void go_through(int x, int y) {
-	for (int i=0; i<4; i++) { //实操改为探测前、左、右
+	for (int i=0; i<4; i++) {
 		int x_d = x + step[i][0];
 		int y_d = y + step[i][1];
+		//越界
 		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
-			//越界
 			continue;
 		}
 		if (graph[x_d][y_d] == 3) {
@@ -720,15 +807,15 @@ void go_through(int x, int y) {
 
 void mode_auto(uint16_t x_touch, uint16_t y_touch) {
 	int x_index, y_index, grid_index;
-	if (x_touch > 10 && x_touch < 57 && y_touch > 230 && y_touch < 270){
+	if (x_touch > 10 && x_touch < 57 && y_touch > 230 && y_touch < 270){ //按START开始选择起点
 		start_selected = 0;
 		start_selecting = 1;
 		end_selecting = 0;
-	}else if (x_touch > 67 && x_touch < 114 && y_touch > 230 && y_touch < 270){
+	}else if (x_touch > 67 && x_touch < 114 && y_touch > 230 && y_touch < 270){ //按END开始选择终点
 		end_selected = 0;
 		start_selecting = 0;
 		end_selecting = 1;
-	}else if (x_touch > 20 && x_touch < 220 && y_touch > 20 && y_touch < 220) {
+	}else if (x_touch > 20 && x_touch < 220 && y_touch > 20 && y_touch < 220) { //按网格进行选择
 		x_index = (x_touch-20) / 50;
 		y_index = (y_touch-20) / 50;
 		grid_index = (4*y_index) + x_index;
@@ -747,9 +834,9 @@ void mode_auto(uint16_t x_touch, uint16_t y_touch) {
 			end[1] = y_index;
 			end_selected = 1;
 		}
-	}else if (start_selected && end_selected && x_touch > 181 && x_touch < 228 && y_touch > 230 && y_touch < 270){ //开始寻路
-		graph[start[0]][start[1]] = 2;
-		dfs(start[0], start[1]);
+	}else if (start_selected && end_selected && x_touch > 181 && x_touch < 228 && y_touch > 230 && y_touch < 270){ //按ROUTE开始寻路
+		graph[start[0]][start[1]] = 2;	// 起点默认无障碍
+		dfs(start[0], start[1]);		// 从起点开始探测障碍
 		go_through(start[0], start[1]);
 	}
 }

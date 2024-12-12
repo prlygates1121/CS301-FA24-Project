@@ -18,11 +18,27 @@ void set_joint_angle(float angle)
 	__HAL_TIM_SET_COMPARE(&htim5, TIM_CHANNEL_1, angle);
 }
 
+void turn_joint(uint8_t direction) {
+	switch (direction) {
+		case AHEAD:
+			set_joint_angle(82);
+			break;
+		case LEFT:
+			set_joint_angle(182);
+			break;
+		case RIGHT:
+			set_joint_angle(3);
+			break;
+		default:
+			break;
+	}
+}
+
 /* ------------------------------------- Ultrasonic Sensor Functions ------------------------------------- */
 
-uint16_t get_distance() {
+uint8_t get_distance() {
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_SET);
-	HAL_Delay_us(20);
+	HAL_Delay_us(100);
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_RESET);
 	return US_distance * 2;
 }
@@ -82,7 +98,48 @@ void process_command(uint8_t command[]) {
 			HAL_Delay(500);
 			car_brake();
 			break;
+		case SPIN_LEFT:
+			car_spin_left(55);
+			HAL_Delay(1120);
+			car_brake();
+			break;
+		case SPIN_RIGHT:
+			car_spin_right(55);
+			HAL_Delay(1120);
+			car_brake();
 		case BRAKE:
+			car_brake();
+			break;
+		case SERVO_AHEAD:
+			turn_joint(AHEAD);
+			HAL_Delay(1000);
+			break;
+		case SERVO_LEFT:
+			turn_joint(LEFT);
+			HAL_Delay(1000);
+			break;
+		case SERVO_RIGHT:
+			turn_joint(RIGHT);
+			HAL_Delay(1000);
+			break;
+		case TURN_AROUND_RIGHT:
+			turn_joint(AHEAD);
+			HAL_Delay(1000);
+			car_spin_right(55);
+			HAL_Delay(1120);
+			car_brake();
+			car_spin_right(55);
+			HAL_Delay(1120);
+			car_brake();
+			break;
+		case TURN_AROUND_LEFT:
+			turn_joint(AHEAD);
+			HAL_Delay(1000);
+			car_spin_left(55);
+			HAL_Delay(1120);
+			car_brake();
+			car_spin_left(55);
+			HAL_Delay(1120);
 			car_brake();
 			break;
 		default:
@@ -93,22 +150,22 @@ void process_command(uint8_t command[]) {
 				switch (command[i]) {
 					case ROUTE_UP:
 						car_run(80);
-						HAL_Delay(600);
+						HAL_Delay(2300);
 						car_brake();
 						break;
 					case ROUTE_DOWN:
 						car_run(-80);
-						HAL_Delay(600);
+						HAL_Delay(2300);
 						car_brake();
 						break;
 					case ROUTE_LEFT:
 						car_move_left(80);
-						HAL_Delay(600);
+						HAL_Delay(2300);
 						car_brake();
 						break;
 					case ROUTE_RIGHT:
 						car_move_right(80);
-						HAL_Delay(600);
+						HAL_Delay(2300);
 						car_brake();
 						break;
 				}
@@ -225,17 +282,17 @@ void car_move_left(int32_t speed) {
 // Spin the car left by rotating left wheels backward and right wheels forward
 void car_spin_left(int32_t speed)
 {
-    set_speed(1, -speed); // Left front motor backward
+    set_speed(1, speed); // Left front motor backward
     set_speed(2, speed);  // Right front motor forward
-    set_speed(3, -speed); // Left rear motor backward
+    set_speed(3, speed); // Left rear motor backward
     set_speed(4, speed);  // Right rear motor forward
 }
 
 // Spin the car right by rotating right wheels backward and left wheels forward
 void car_spin_right(int32_t speed)
 {
-    set_speed(1, speed);  // Left front motor forward
+    set_speed(1, -speed);  // Left front motor forward
     set_speed(2, -speed); // Right front motor backward
-    set_speed(3, speed);  // Left rear motor forward
+    set_speed(3, -speed);  // Left rear motor forward
     set_speed(4, -speed); // Right rear motor backward
 }
