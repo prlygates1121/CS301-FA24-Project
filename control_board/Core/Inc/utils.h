@@ -37,6 +37,8 @@
 #define TURN_AROUND_RIGHT 15
 #define TURN_AROUND_LEFT 16
 
+#define DETECTION_MODE 17
+
 void HAL_Delay_us(uint32_t us);
 
 void test_communication();

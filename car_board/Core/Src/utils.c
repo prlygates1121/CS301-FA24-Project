@@ -1,7 +1,15 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include "utils.h"
 #include "24l01.h"
 #include "tim.h"
+
+extern UART_HandleTypeDef huart1;
+extern uint8_t nrf_tx_buf[32];
+char DATA_TO_SEND[800];
+
+
 
 /* --------------------------------------------- Custom Delay -------------------------------------------- */
 
@@ -32,15 +40,16 @@ void turn_joint(uint8_t direction) {
 		default:
 			break;
 	}
+	HAL_Delay(500);
 }
 
 /* ------------------------------------- Ultrasonic Sensor Functions ------------------------------------- */
 
-uint8_t get_distance() {
+uint32_t get_distance() {
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_SET);
-	HAL_Delay_us(100);
+	HAL_Delay_us(200);
 	HAL_GPIO_WritePin(US_SEND_GPIO_Port, US_SEND_Pin, GPIO_PIN_RESET);
-	return US_distance * 2;
+	return (US_distance * 2 > 255) ? 255 : (US_distance * 2);
 }
 
 /* --------------------------------------- Communication Functions --------------------------------------- */
@@ -74,6 +83,303 @@ void test_communication() {
 	NRF24L01_TX_Mode();
 	NRF24L01_TxPacket(test_data_received);
 	TURN_OFF_LED1;
+}
+
+uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking) {
+	uint8_t return_val;
+	NRF24L01_TX_Mode();
+	if (blocking == 0) {
+		return_val = NRF24L01_TxPacket(txbuf);
+	} else {
+		while (NRF24L01_TxPacket(txbuf) != TX_OK);
+		return_val = TX_OK;
+	}
+	NRF24L01_RX_Mode();
+	return return_val;
+}
+
+//int ground[4][4] = {
+//    {0, 1, 0, 0},
+//    {0, 1, 1, 0},
+//    {0, 1, 0, 0},
+//    {0, 0, 0, 1},
+//};
+int graph[4][4] = {
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+};
+
+int start[2];
+int end[2];
+uint8_t point[2];											//小车坐标
+int total_obstacle = 5;
+int obstacle_cnt = 0;
+int clear_cnt = 1;
+int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},};	//右、左、后、前
+uint32_t dist[1];
+
+//模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
+void detect(int x, int y, uint8_t next_step[]) {
+	uint8_t detect_command[32] = {0};
+	// 探测四个方向有无障碍
+	for(int i=0; i<4; i++) {
+		next_step[i] = 0;
+		int x_d = x + step[i][0];
+		int y_d = y + step[i][1];
+		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
+			//越界
+			continue;
+		}
+		//没探测过
+		if (!graph[x_d][y_d]) {
+			switch (i) {
+				// 看右边
+				case 0:
+					turn_joint(RIGHT);
+					break;
+				// 看左边
+				case 1:
+					turn_joint(LEFT);
+					break;
+				// 转过头看后边
+				case 2:
+					turn_joint(AHEAD);
+					car_turn_around_right();
+					break;
+				// 看前边
+				case 3:
+					turn_joint(AHEAD);
+					break;
+				default:
+					break;
+			}
+			for (uint8_t i = 0; i < 3; i++) {
+				HAL_Delay(1000);
+				dist[0] = get_distance();
+			}
+			nrf_tx_buf[0] = 0;
+			nrf_tx_buf[1] = dist[0];
+			nrf_send(nrf_tx_buf, 0);
+			if (dist[0] <= 20) {
+				//有障碍
+				graph[x_d][y_d] = 1;
+//				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 38, 45, obstacle);
+				detect_command[0] = 1;
+				detect_command[1] = x_d;
+				detect_command[2] = y_d;
+				nrf_send(detect_command, 0);
+				obstacle_cnt++;
+			} else {
+				//无障碍
+				graph[x_d][y_d] = 2;
+//				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 39, 40, left_red);
+				detect_command[0] = 2;
+				detect_command[1] = x_d;
+				detect_command[2] = y_d;
+				nrf_send(detect_command, 0);
+				clear_cnt++;
+				next_step[i] = 1;
+			}
+			if (i == 2) {
+				car_turn_around_left();
+			}
+		}
+	}
+}
+
+uint8_t current_pos[2];
+
+uint8_t dfs(int x, int y) {
+	uint8_t dfs_command[32] = {0};
+	uint8_t to_end = 0; //是否能到终点
+
+	uint8_t next_step[4] = {0, 0, 0, 0};//记录右、左、后、前是否可以走
+	detect(x, y, next_step);
+
+	for (int i=0; i<4; i++) {
+		if (next_step[i]) {
+			//可以走，就走
+			point[0] = x + step[i][0];
+			point[1] = y + step[i][1];
+
+			switch (i) {
+				// 往右走一格
+				case 0:
+					car_run_right_one();
+					break;
+				// 往左走一格
+				case 1:
+					car_run_left_one();
+					break;
+				// 往后走一格
+				case 2:
+					car_run_down_one();
+					break;
+				// 往前走一格
+				case 3:
+					car_run_up_one();
+					break;
+				default:
+					break;
+			}
+			sprintf(DATA_TO_SEND, "DFS dives deeper: (%d, %d)\n", x + step[i][0], y + step[i][1]);
+			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			dfs_command[0] = 3;
+			dfs_command[1] = point[0];
+			dfs_command[2] = point[1];
+			nrf_send(dfs_command, 0);
+			if (dfs(point[0], point[1])) {
+				to_end = 1;
+			}
+			switch (i) {
+				// 往左回一格
+				case 0:
+					car_run_left_one();
+					break;
+				// 往右回一格
+				case 1:
+					car_run_right_one();
+					break;
+				// 往前回一格
+				case 2:
+					car_run_up_one();
+					break;
+				// 往后回一格
+				case 3:
+					car_run_down_one();
+					break;
+				default:
+					break;
+			}
+			point[0] = x;
+			point[1] = y;
+			sprintf(DATA_TO_SEND, "DFS floats up: (%d, %d)\n", x, y);
+			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			dfs_command[0] = 3;
+			dfs_command[1] = point[0];
+			dfs_command[2] = point[1];
+			nrf_send(dfs_command, 0);
+		}
+	}
+	to_end |= (x == end[0]) && (y == end[1]);
+	if ((x == end[0]) && (y == end[1])) {
+		if (obstacle_cnt == total_obstacle) {
+			//到终点时找全了,就停着不走了
+			for (int x_show=0; x_show<4; x_show++) {
+				for (int y_show=0; y_show<4; y_show++) {
+					if (graph[x_show][y_show] == 1) {
+						dfs_command[0] = 1;
+						dfs_command[1] = x_show;
+						dfs_command[2] = y_show;
+						nrf_send(dfs_command, 0);
+						HAL_Delay(500);
+					}
+				}
+			}
+			HAL_Delay(100000);
+		} else if (clear_cnt == 16 - total_obstacle) {
+			//到终点时找全了,就停着不走了
+			for (int i=0; i<4; i++) {
+				for (int j=0; j<4; j++) {
+					if (!graph[i][j]) {
+						graph[i][j] = 1;
+					}
+				}
+			}
+			for (int x_show=0; x_show<4; x_show++) {
+				for (int y_show=0; y_show<4; y_show++) {
+					if (graph[x_show][y_show] == 1) {
+//						LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
+						dfs_command[0] = 1;
+						dfs_command[1] = x_show;
+						dfs_command[2] = y_show;
+						nrf_send(dfs_command, 0);
+						HAL_Delay(500);
+					}
+				}
+			}
+			HAL_Delay(100000);
+		}
+	}
+	if (to_end) {
+		graph[x][y] = 3;
+	}
+	return to_end;
+}
+
+void go_through(int x, int y) {
+	uint8_t go_command[32] = {0};
+
+	for (int i=0; i<4; i++) {
+		int x_d = x + step[i][0];
+		int y_d = y + step[i][1];
+		//越界
+		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
+			continue;
+		}
+		//如果这条路通向终点
+		if (graph[x_d][y_d] == 3) {
+			graph[x][y] = 4;
+			point[0] = x_d;
+			point[1] = y_d;
+			//走
+			switch (i) {
+				// 往右走一格
+				case 0:
+					car_run_right_one();
+					break;
+				// 往左走一格
+				case 1:
+					car_run_left_one();
+					break;
+				// 往后走一格
+				case 2:
+					car_run_down_one();
+					break;
+				// 往前走一格
+				case 3:
+					car_run_up_one();
+					break;
+				default:
+					break;
+			}
+			sprintf(DATA_TO_SEND, "On my way to the end: (%d, %d)\n", x_d, y_d);
+			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			go_command[0] = 4;
+			go_command[1] = point[0];
+			go_command[2] = point[1];
+			nrf_send(go_command, 0);
+			//如果已经到了终点
+			if (x_d == end[0] && y_d == end[1]) {
+				if (obstacle_cnt != total_obstacle) {
+					for (int k=0; k<4; k++) {
+						for (int j=0; j<4; j++) {
+							if (!graph[k][j]) {
+								graph[k][j] = 1;
+							}
+						}
+					}
+				}
+				for (int x_show=0; x_show<4; x_show++) {
+					for (int y_show=0; y_show<4; y_show++) {
+						if (graph[x_show][y_show] == 1) {
+//							LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
+							go_command[0] = 1;
+							go_command[1] = x_show;
+							go_command[2] = y_show;
+							nrf_send(go_command, 0);
+							HAL_Delay(500);
+						}
+					}
+				}
+//				HAL_Delay(100000);
+			} else {
+				go_through(x_d, y_d);
+			}
+		}
+	}
 }
 
 void process_command(uint8_t command[]) {
@@ -112,35 +418,34 @@ void process_command(uint8_t command[]) {
 			break;
 		case SERVO_AHEAD:
 			turn_joint(AHEAD);
-			HAL_Delay(1000);
+			HAL_Delay(500);
 			break;
 		case SERVO_LEFT:
 			turn_joint(LEFT);
-			HAL_Delay(1000);
+			HAL_Delay(500);
 			break;
 		case SERVO_RIGHT:
 			turn_joint(RIGHT);
-			HAL_Delay(1000);
+			HAL_Delay(500);
 			break;
 		case TURN_AROUND_RIGHT:
-			turn_joint(AHEAD);
-			HAL_Delay(1000);
-			car_spin_right(55);
-			HAL_Delay(1120);
-			car_brake();
-			car_spin_right(55);
-			HAL_Delay(1120);
-			car_brake();
+			car_turn_around_right();
 			break;
 		case TURN_AROUND_LEFT:
-			turn_joint(AHEAD);
-			HAL_Delay(1000);
-			car_spin_left(55);
-			HAL_Delay(1120);
-			car_brake();
-			car_spin_left(55);
-			HAL_Delay(1120);
-			car_brake();
+			car_turn_around_left();
+			break;
+		case DETECTION_MODE:
+			start[0] = command[1];
+			start[1] = command[2];
+			end[0] = command[3];
+			end[1] = command[4];
+			point[0] = start[0];
+			point[1] = start[1];
+			graph[start[0]][start[1]] = 2;
+			sprintf(DATA_TO_SEND, "Starting at (%d, %d) to the end (%d, %d)\n", start[0], start[1], end[0], end[1]);
+			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+			dfs(start[0], start[1]);
+			go_through(start[0], start[1]);
 			break;
 		default:
 			for (uint8_t i = 0; i < 16; i++) {
@@ -149,24 +454,16 @@ void process_command(uint8_t command[]) {
 				}
 				switch (command[i]) {
 					case ROUTE_UP:
-						car_run(80);
-						HAL_Delay(2300);
-						car_brake();
+						car_run_up_one();
 						break;
 					case ROUTE_DOWN:
-						car_run(-80);
-						HAL_Delay(2300);
-						car_brake();
+						car_run_down_one();
 						break;
 					case ROUTE_LEFT:
-						car_move_left(80);
-						HAL_Delay(2300);
-						car_brake();
+						car_run_left_one();
 						break;
 					case ROUTE_RIGHT:
-						car_move_right(80);
-						HAL_Delay(2300);
-						car_brake();
+						car_run_right_one();
 						break;
 				}
 				HAL_Delay(500);
@@ -295,4 +592,48 @@ void car_spin_right(int32_t speed)
     set_speed(2, -speed); // Right front motor backward
     set_speed(3, -speed);  // Left rear motor forward
     set_speed(4, -speed); // Right rear motor backward
+}
+
+void car_turn_around_right() {
+	HAL_Delay(1000);
+	car_spin_right(55);
+	HAL_Delay(1120);
+	car_brake();
+	car_spin_right(55);
+	HAL_Delay(1120);
+	car_brake();
+}
+
+void car_turn_around_left() {
+	HAL_Delay(1000);
+	car_spin_left(55);
+	HAL_Delay(1120);
+	car_brake();
+	car_spin_left(55);
+	HAL_Delay(1120);
+	car_brake();
+}
+
+void car_run_up_one() {
+	car_run(80);
+	HAL_Delay(2300);
+	car_brake();
+}
+
+void car_run_down_one() {
+	car_run(-80);
+	HAL_Delay(2300);
+	car_brake();
+}
+
+void car_run_left_one() {
+	car_move_left(80);
+	HAL_Delay(2300);
+	car_brake();
+}
+
+void car_run_right_one() {
+	car_move_right(80);
+	HAL_Delay(2300);
+	car_brake();
 }

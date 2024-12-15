@@ -7,8 +7,6 @@
 #include "main.h"
 #include "stdbool.h"
 
-extern uint8_t distance;
-
 void HAL_Delay_us(uint32_t us) {
 	__HAL_TIM_SET_COUNTER(&htim1, 0);
 	while (__HAL_TIM_GET_COUNTER(&htim1) < us);
@@ -62,6 +60,7 @@ void test_communication() {
 
 uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking) {
 	uint8_t return_val;
+	HAL_UART_Transmit(&huart1, (uint8_t*)txbuf, 1, HAL_MAX_DELAY);
 	NRF24L01_TX_Mode();
 	if (blocking == 0) {
 		return_val = NRF24L01_TxPacket(txbuf);
@@ -92,10 +91,10 @@ void Draw_Big_Point(uint16_t x, uint16_t y, uint32_t color)
 {
 	//lcd_draw_point(uint16_t x, uint16_t y, uint32_t color)
 //	POINT_COLOR=RED;
-	lcd_draw_point(x,y, RED);//���ĵ�
-	lcd_draw_point(x+1,y, RED);
-	lcd_draw_point(x,y+1, RED);
-	lcd_draw_point(x+1,y+1, RED);
+	lcd_draw_point(x,y, color);//���ĵ�
+	lcd_draw_point(x+1,y, color);
+	lcd_draw_point(x,y+1, color);
+	lcd_draw_point(x+1,y+1, color);
 }
 
 
@@ -589,221 +588,15 @@ void mode_route(uint16_t x_touch, uint16_t y_touch, int touched){
 	}
 }
 
-
-
-
 uint8_t start_selecting = 0;
 uint8_t end_selecting = 0;
 uint8_t start_selected = 0;
 uint8_t end_selected = 0;
 
-
-//int ground[4][4] = {
-//    {0, 1, 0, 0},
-//    {0, 1, 1, 0},
-//    {0, 1, 0, 0},
-//    {0, 0, 0, 1},
-//};
-int graph[4][4] = {
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-};
-
 int start[2];
 int end[2];
-int point[2];											//小车坐标
-int total_obstacle = 5;
-int obstacle_cnt = 0;
-int clear_cnt = 0;
-int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},};	//右、左、后、前
-uint8_t next_step[4] = {0, 0, 0, 0}; 					//记录右、左、后、前是否可以走
+int point[2];		//小车坐标
 
-//模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
-void detect(int x, int y) {
-	HAL_Delay(4000);
-	uint8_t detect_command[32] = {0};
-	// 探测四个方向有无障碍
-	for(int i=0; i<4; i++) {
-		next_step[i] = 0;
-		int x_d = x + step[i][0];
-		int y_d = y + step[i][1];
-		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
-			//越界
-			continue;
-		}
-		//没探测过
-		if (!graph[x_d][y_d]) {
-			switch (i) {
-				// 看右边
-				case 0:
-					detect_command[0] = SERVO_RIGHT;
-					nrf_send(detect_command, 0);
-					break;
-				// 看左边
-				case 1:
-					detect_command[0] = SERVO_LEFT;
-					nrf_send(detect_command, 0);
-					break;
-				// 转过头看后边
-				case 2:
-					detect_command[0] = TURN_AROUND_RIGHT;
-					nrf_send(detect_command, 0);
-					HAL_Delay(3000);
-					break;
-				// 看前边
-				case 3:
-					detect_command[0] = SERVO_AHEAD;
-					nrf_send(detect_command, 0);
-					break;
-				default:
-					break;
-			}
-			HAL_Delay(4000);
-			lcd_fill(200, 0, 224, 16, WHITE);
-			lcd_show_num(200, 0, distance, 3, 16, BLUE);
-			if (distance <= 90) {
-				//有障碍
-				graph[x_d][y_d] = 1;
-				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 38, 45, obstacle);
-				obstacle_cnt++;
-			} else {
-				//无障碍
-				graph[x_d][y_d] = 2;
-				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 39, 40, left_red);
-				clear_cnt++;
-				next_step[i] = 1;
-			}
-			if (i == 2) {
-				detect_command[0] = TURN_AROUND_LEFT;
-				nrf_send(detect_command, 0);
-				HAL_Delay(4000);
-			}
-		} else {
-			if (graph[x_d][y_d] == 1) {
-				next_step[i] = 1;
-			}
-		}
-	}
-}
-
-uint8_t dfs(int x, int y) {
-	uint8_t dfs_command[32] = {0};
-	uint8_t to_end = 0; //是否能到终点
-	detect(x, y);
-	Draw_Big_Point(20+(50*x)+2, 10+(50*y)+2, BLUE);
-	Draw_Big_Point(20+(50*x)+4, 10+(50*y)+4, BLUE);
-	for (int i=0; i<4; i++) {
-		if (next_step[i]) {
-			//可以走，就走
-			point[0] = x + step[i][0];
-			point[1] = y + step[i][1];
-			switch (i) {
-				// 往右走一格
-				case 0:
-					dfs_command[0] = ROUTE_RIGHT;
-					nrf_send(dfs_command, 0);
-					break;
-				// 往左走一格
-				case 1:
-					dfs_command[0] = ROUTE_LEFT;
-					nrf_send(dfs_command, 0);
-					break;
-				// 往后走一格
-				case 2:
-					dfs_command[0] = ROUTE_DOWN;
-					nrf_send(dfs_command, 0);
-					break;
-				// 往前走一格
-				case 3:
-					dfs_command[0] = ROUTE_UP;
-					nrf_send(dfs_command, 0);
-					break;
-				default:
-					break;
-			}
-			HAL_Delay(3000);
-			if (dfs(point[0], point[1])) {
-				to_end = 1;
-			}
-			point[0] = x;
-			point[1] = y;
-		}
-	}
-	to_end |= (x == end[0]) && (y == end[1]);
-	if ((x == end[0]) && (y == end[1])) {
-		if (obstacle_cnt == total_obstacle) {
-			//到终点时找全了
-			for (int x_show=0; x_show<4; x_show++) {
-				for (int y_show=0; y_show<4; y_show++) {
-					if (graph[x_show][y_show] == 1) {
-						LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
-					}
-				}
-			}
-			HAL_Delay(100000);
-		} else if (clear_cnt == 12) {
-			//到终点时找全了
-			for (int i=0; i<4; i++) {
-				for (int j=0; j<4; j++) {
-					if (!graph[i][j]) {
-						graph[i][j] = 1;
-					}
-				}
-			}
-			for (int x_show=0; x_show<4; x_show++) {
-				for (int y_show=0; y_show<4; y_show++) {
-					if (graph[x_show][y_show] == 1) {
-						LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
-					}
-				}
-			}
-			HAL_Delay(100000);
-		}
-	}
-	if (to_end) {
-		graph[x][y] = 3;
-	}
-	return to_end;
-}
-
-void go_through(int x, int y) {
-	for (int i=0; i<4; i++) {
-		int x_d = x + step[i][0];
-		int y_d = y + step[i][1];
-		//越界
-		if (x_d < 0 || x_d >= 4 || y_d < 0 || y_d >= 4) {
-			continue;
-		}
-		if (graph[x_d][y_d] == 3) {
-			graph[x][y] = 4;
-			point[0] = x_d;
-			point[1] = y_d;
-			if (x_d == end[0] && y_d == end[1]) {
-				if (obstacle_cnt != total_obstacle) {
-					for (int k=0; k<4; k++) {
-						for (int j=0; j<4; j++) {
-							if (!graph[k][j]) {
-								graph[k][j] = 1;
-							}
-						}
-					}
-				}
-				for (int x_show=0; x_show<4; x_show++) {
-					for (int y_show=0; y_show<4; y_show++) {
-						if (graph[x_show][y_show] == 1) {
-							LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
-						}
-					}
-				}
-				HAL_Delay(100000);
-			} else {
-				go_through(x_d, y_d);
-			}
-		}
-	}
-}
 
 void mode_auto(uint16_t x_touch, uint16_t y_touch) {
 	int x_index, y_index, grid_index;
@@ -835,9 +628,16 @@ void mode_auto(uint16_t x_touch, uint16_t y_touch) {
 			end_selected = 1;
 		}
 	}else if (start_selected && end_selected && x_touch > 181 && x_touch < 228 && y_touch > 230 && y_touch < 270){ //按ROUTE开始寻路
-		graph[start[0]][start[1]] = 2;	// 起点默认无障碍
-		dfs(start[0], start[1]);		// 从起点开始探测障碍
-		go_through(start[0], start[1]);
+		uint8_t command_mode_auto[32];
+		command_mode_auto[0] = DETECTION_MODE;
+		command_mode_auto[1] = start[0];
+		command_mode_auto[2] = start[1];
+		command_mode_auto[3] = end[0];
+		command_mode_auto[4] = end[1];
+		nrf_send(command_mode_auto, 0);
+//		graph[start[0]][start[1]] = 2;	// 起点默认无障碍
+//		dfs(start[0], start[1]);		// 从起点开始探测障碍
+//		go_through(start[0], start[1]);
 	}
 }
 

@@ -20,6 +20,7 @@
 #include "main.h"
 #include "spi.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -101,6 +102,7 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM4_Init();
   MX_SPI1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
@@ -134,6 +136,7 @@ int main(void)
 while (1)
   {
 	if (command_ready) {
+//		HAL_UART_Transmit(&huart1, what, 1, HAL_MAX_DELAY);
 		process_command(nrf_rx_buf);
 		command_ready = 0;
 	}
@@ -142,11 +145,10 @@ while (1)
 		uint8_t distance_fetched = get_distance();
 		nrf_tx_buf[0] = 0;
 		nrf_tx_buf[1] = distance_fetched;
-		NRF24L01_TX_Mode();
-		NRF24L01_TxPacket(nrf_tx_buf);
-		NRF24L01_RX_Mode();
+		nrf_send(nrf_tx_buf, 0);
 		current_millis = HAL_GetTick();
 	}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -63,6 +63,13 @@ extern UART_HandleTypeDef huart1;
 extern uint8_t distance;
 extern uint8_t display_distance;
 extern uint8_t nrf_rx_buf[32];
+extern uint8_t obstacle_pos[2];
+extern uint8_t clearing_pos[2];
+extern uint8_t main_pos[2];
+extern uint8_t get_obstacle;
+extern uint8_t get_clearing;
+extern uint8_t get_main;
+extern uint8_t get_main_back;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -261,6 +268,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 					// nrf_rx_buf[1] holds the distance value
 					distance = nrf_rx_buf[1];
 					display_distance = 1;
+					break;
+				// nrf_rx_buf[0] == 1 suggests that the coordinate of an obstacle is received
+				case 1:
+					obstacle_pos[0] = nrf_rx_buf[1];
+					obstacle_pos[1] = nrf_rx_buf[2];
+					get_obstacle = 1;
+					break;
+				// nrf_rx_buf[0] == 2 suggests that the coordinate of a clearing is received
+				case 2:
+					clearing_pos[0] = nrf_rx_buf[1];
+					clearing_pos[1] = nrf_rx_buf[2];
+					get_clearing = 1;
+					break;
+				case 3:
+					main_pos[0] = nrf_rx_buf[1];
+					main_pos[1] = nrf_rx_buf[2];
+					get_main = 1;
+					break;
+				case 4:
+					main_pos[0] = nrf_rx_buf[1];
+					main_pos[1] = nrf_rx_buf[2];
+					get_main_back = 1;
 					break;
 				default:
 					break;

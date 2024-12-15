@@ -234,9 +234,8 @@ void EXTI2_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	HAL_Delay_us(10);
+//	HAL_Delay_us(10);
 	if (GPIO_Pin == US_STATUS_Pin) {
-		uint8_t give_up = 0;
 		// Set TIM2 counter to 0
 		__HAL_TIM_SET_COUNTER(&htim2, 0);
 		// Start counter
@@ -250,11 +249,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		// Stop counter
 		__HAL_TIM_DISABLE(&htim2);
 		// Get the elapsed time
-		if (give_up) {
-			US_distance = 255;
-		} else {
-			US_distance = __HAL_TIM_GET_COUNTER(&htim2) * 5 * 34 / 200.0;
-		}
+		US_distance = __HAL_TIM_GET_COUNTER(&htim2) * 5 * 34 / 200.0;
+
 	} else if (GPIO_Pin == NRF_IRQ_Pin) {
 		uint8_t sta = NRF24L01_Read_Reg(STATUS);
 		if (sta & RX_OK)

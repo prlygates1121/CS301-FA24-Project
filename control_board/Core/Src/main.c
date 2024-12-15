@@ -31,6 +31,7 @@
 #include "touch.h"
 #include "24cxx.h"
 #include "stdbool.h"
+//#include "images.h"
 
 /* USER CODE END Includes */
 
@@ -73,6 +74,17 @@ int debounceLabel = 0;//0:没按过 1:第一次按了
 uint8_t distance = 0;
 uint8_t display_distance = 0;
 uint8_t nrf_rx_buf[32];
+
+uint8_t obstacle_pos[2];
+uint8_t clearing_pos[2];
+uint8_t main_pos[2];
+uint8_t get_obstacle = 0;
+uint8_t get_clearing = 0;
+uint8_t get_main = 0;
+uint8_t get_main_back = 0;
+
+extern const unsigned char left_red[3120];
+extern const unsigned char obstacle[3420];
 
 /* USER CODE END PV */
 
@@ -163,6 +175,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
 	  // scan the touch
 	  tp_dev.scan(0);
 	  // if the screen is touched
@@ -263,12 +279,10 @@ int main(void)
 			  case 1:
 				  mode_route(x_touch, y_touch, 0);
 				  break;
-			  case 2:
-				  mode_auto(x_touch, y_touch);
-				  break;
 		  }
 
 	  }
+
 	  t++;
 	  if (t == 15000) {
 		  t = 0;
@@ -279,17 +293,34 @@ int main(void)
 		  NRF24L01_Write_Reg(FLUSH_RX,0xff);
 		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 	  }
+	  if (get_obstacle) {
+		  LCD_ShowPicture(20+(50*obstacle_pos[0])+2, 10+(50*obstacle_pos[1])+2, 38, 45, obstacle);
+		  get_obstacle = 0;
+	  }
+	  if (get_clearing) {
+		  LCD_ShowPicture(20+(50*clearing_pos[0])+2, 10+(50*clearing_pos[1])+2, 39, 40, left_red);
+		  get_clearing = 0;
+	  }
+	  if (get_main) {
+		  Draw_Big_Point(20+(50*main_pos[0])+2, 10+(50*main_pos[1])+2, BLUE);
+		  Draw_Big_Point(20+(50*main_pos[0])+4, 10+(50*main_pos[1])+2, BLUE);
+		  Draw_Big_Point(20+(50*main_pos[0])+2, 10+(50*main_pos[1])+4, BLUE);
+		  Draw_Big_Point(20+(50*main_pos[0])+4, 10+(50*main_pos[1])+4, BLUE);
+		  get_main = 0;
+	  }
+	  if (get_main_back) {
+		  Draw_Big_Point(20+(50*main_pos[0])+2, 10+(50*main_pos[1])+2, RED);
+		  Draw_Big_Point(20+(50*main_pos[0])+4, 10+(50*main_pos[1])+2, RED);
+		  Draw_Big_Point(20+(50*main_pos[0])+2, 10+(50*main_pos[1])+4, RED);
+		  Draw_Big_Point(20+(50*main_pos[0])+4, 10+(50*main_pos[1])+4, RED);
+		  get_main_back = 0;
+	  }
 	  // Display distance
 	  if (display_distance) {
-//		  sprintf(DATA_TO_SEND, "distance:%d\n", distance);
-//		  HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 		  lcd_fill(0, 0, 24, 16, WHITE);
 		  lcd_show_num(0, 0, distance, 3, 16, BLUE);
 		  display_distance = 0;
 	  }
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }

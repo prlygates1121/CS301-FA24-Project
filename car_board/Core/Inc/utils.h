@@ -52,6 +52,8 @@
 #define TURN_AROUND_RIGHT 15
 #define TURN_AROUND_LEFT 16
 
+#define DETECTION_MODE 17
+
 // Joint Angles
 #define AHEAD 0
 #define LEFT 1
@@ -71,11 +73,12 @@ void turn_joint(uint8_t direction);
 
 /* -------------------------------------- Ultrasonic Sensor Functions -------------------------------------- */
 
-uint8_t get_distance();
+uint32_t get_distance();
 
 /* ---------------------------------------- Communication Functions ---------------------------------------- */
 
 void test_communication();
+uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking);
 void process_command(uint8_t command[]);
 
 /* -------------------------------------------- Motor Functions -------------------------------------------- */
@@ -89,3 +92,9 @@ void car_move_right(int32_t speed);
 void car_move_left(int32_t speed);
 void car_spin_left(int32_t speed);
 void car_spin_right(int32_t speed);
+void car_turn_around_right();
+void car_turn_around_left();
+void car_run_up_one();
+void car_run_down_one();
+void car_run_left_one();
+void car_run_right_one();
