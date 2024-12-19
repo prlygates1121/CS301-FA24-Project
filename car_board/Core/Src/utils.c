@@ -1,9 +1,9 @@
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "utils.h"
 #include "24l01.h"
 #include "tim.h"
+#include "inv_mpu.h"
 
 extern UART_HandleTypeDef huart1;
 extern uint8_t nrf_tx_buf[32];
@@ -162,8 +162,9 @@ void detect(int x, int y, uint8_t next_step[]) {
 			nrf_tx_buf[0] = 0;
 			nrf_tx_buf[1] = dist[0];
 			nrf_send(nrf_tx_buf, 0);
-			if (dist[0] <= 20) {
+			if (dist[0] <= 90) {
 				//有障碍
+				TURN_ON_BUZZER;
 				graph[x_d][y_d] = 1;
 //				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 38, 45, obstacle);
 				detect_command[0] = 1;
@@ -171,6 +172,8 @@ void detect(int x, int y, uint8_t next_step[]) {
 				detect_command[2] = y_d;
 				nrf_send(detect_command, 0);
 				obstacle_cnt++;
+				HAL_Delay(200);
+				TURN_OFF_BUZZER;
 			} else {
 				//无障碍
 				graph[x_d][y_d] = 2;
@@ -385,23 +388,19 @@ void go_through(int x, int y) {
 void process_command(uint8_t command[]) {
 	switch (command[0]) {
 		case MOVE_FORWARD:
-			car_run(55);
-			HAL_Delay(500);
+			car_run(65, 500);
 			car_brake();
 			break;
 		case MOVE_BACKWARD:
-			car_run(-55);
-			HAL_Delay(500);
+			car_run(-65, 500);
 			car_brake();
 			break;
 		case MOVE_LEFT:
-			car_move_left(55);
-			HAL_Delay(500);
+			car_move_left(65, 500);
 			car_brake();
 			break;
 		case MOVE_RIGHT:
-			car_move_right(55);
-			HAL_Delay(500);
+			car_move_right(65, 500);
 			car_brake();
 			break;
 		case SPIN_LEFT:
@@ -475,7 +474,47 @@ void process_command(uint8_t command[]) {
 
 /* -------------------------------------------- Motor Functions ------------------------------------------- */
 
-// Set motor speed and direction
+// Definitions
+#define PWM_BASE_VALUE 7201
+#define SPEED_SCALE 72
+#define MAX_SPEED 100
+#define MIN_SPEED -100
+
+typedef struct {
+    float Kp;
+    float Ki;
+    float Kd;
+    float previous_error;
+    float integral;
+} PID_Controller;
+
+// Global Variables
+// PID_Controller pid_yaw = {2.f, 0.0f, -0.5f, 0.0f, 0.0f};
+PID_Controller pid_yaw = {2.f, 0.f, -0.5f, 0.0f, 0.0f};
+float stabilization_yaw = 0.0f;
+float desired_yaw = 0.0f;
+
+// Function Prototypes
+float PID_Update(PID_Controller *pid, float setpoint, float measured, float dt);
+void set_speed(uint8_t channel, int32_t speed);
+void setup(void);
+
+float get_yaw(void)
+{
+    float yaw;
+    while (atk_ms6050_dmp_get_data(&yaw) != 0);
+    return yaw;
+}
+
+float PID_Update(PID_Controller *pid, float setpoint, float measured, float dt)
+{
+    float error = setpoint - measured;
+    pid->integral += error * dt;
+    float derivative = (error - pid->previous_error) / dt;
+    pid->previous_error = error;
+    return (pid->Kp * error) + (pid->Ki * pid->integral) + (pid->Kd * derivative);
+}
+
 void set_speed(uint8_t channel, int32_t speed)
 {
     uint16_t pwm_value;
@@ -516,21 +555,66 @@ void set_speed(uint8_t channel, int32_t speed)
             break;
 
         default:
-            // Invalid channel, handle error if necessary
             break;
     }
 }
 
-// Move the car forward at a specified speed for a specified time
-void car_run(int32_t speed)
+#define INTERVAL 300.0f;
+
+void car_run(int32_t speed, uint32_t ms)
 {
-    set_speed(1, -speed);
-    set_speed(2, speed);
-    set_speed(3, -speed);
-    set_speed(4, speed);
+	uint32_t start_time = HAL_GetTick();
+	uint32_t last_time = start_time;
+	const float control_interval = INTERVAL; // Control loop interval in milliseconds
+
+	while (1)
+	{
+		uint32_t current_time = HAL_GetTick();
+		float elapsed_time = current_time - last_time;
+		if (current_time - start_time >= ms) {
+			car_brake();
+			return;
+		}
+		if (elapsed_time >= control_interval)
+		{
+			last_time = current_time;
+
+			float yaw = get_yaw();
+
+			// 2. Compute PID output
+			float dt = control_interval / 1000.0f; // Convert ms to seconds
+			stabilization_yaw = PID_Update(&pid_yaw, desired_yaw, yaw, dt);
+
+			// 3. Execute movement command with stabilization
+			// Example: Move forward at speed 50
+		    // Base speed commands
+		    int32_t base_speed_front_left = -speed;
+		    int32_t base_speed_front_right = speed;
+		    int32_t base_speed_rear_left = -speed;
+		    int32_t base_speed_rear_right = speed;
+
+		    // Apply yaw stabilization adjustments
+		    base_speed_front_left += stabilization_yaw;
+		    base_speed_rear_left += stabilization_yaw;
+		    base_speed_front_right += stabilization_yaw;
+		    base_speed_rear_right += stabilization_yaw;
+
+		    // Limit speeds to [MIN_SPEED, MAX_SPEED]
+		    base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
+		    base_speed_front_right = (base_speed_front_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_right < MIN_SPEED) ? MIN_SPEED : base_speed_front_right);
+		    base_speed_rear_left = (base_speed_rear_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_left < MIN_SPEED) ? MIN_SPEED : base_speed_rear_left);
+		    base_speed_rear_right = (base_speed_rear_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_right < MIN_SPEED) ? MIN_SPEED : base_speed_rear_right);
+
+		    // Set motor speeds
+		    set_speed(1, base_speed_rear_left);    // Left Rear
+		    set_speed(2, base_speed_front_right);  // Right Front
+		    set_speed(3, base_speed_front_left);   // Left Front
+		    set_speed(4, base_speed_rear_right);   // Right Rear
+		}
+	}
+
 }
 
-// Stop the car by setting all motors' speed to 0
 void car_brake()
 {
     set_speed(1, 0);
@@ -546,52 +630,101 @@ void car_brake()
 // Turn the car left by stopping the left motors and moving the right motors forward
 void car_turn_left(int32_t speed)
 {
-    set_speed(1, 0);      // Stop left front motor
-    set_speed(2, speed);  // Right front motor forward
-    set_speed(3, 0);      // Stop left rear motor
-    set_speed(4, speed);  // Right rear motor forward
+    set_speed(1, 0);
+    set_speed(2, speed);
+    set_speed(3, 0);
+    set_speed(4, speed);
 }
 
 // Turn the car right by stopping the right motors and moving the left motors forward
 void car_turn_right(int32_t speed)
 {
-    set_speed(1, speed);  // Left front motor forward
-    set_speed(2, 0);      // Stop right front motor
-    set_speed(3, speed);  // Left rear motor forward
-    set_speed(4, 0);      // Stop right rear motor
+    set_speed(1, speed);
+    set_speed(2, 0);
+    set_speed(3, speed);
+    set_speed(4, 0);
 }
 
-void car_move_right(int32_t speed) {
-	set_speed(3, speed);
-	set_speed(4, speed);
-	set_speed(1, -speed);
-	set_speed(2, -speed);
+void car_move_right(int32_t speed, uint32_t ms) {
+//	set_speed(3, speed);
+//	set_speed(4, speed);
+//	set_speed(1, -speed);
+//	set_speed(2, -speed);
+
+	uint32_t start_time = HAL_GetTick();
+	uint32_t last_time = start_time;
+	const float control_interval = INTERVAL; // Control loop interval in milliseconds
+
+	while (1)
+	{
+		uint32_t current_time = HAL_GetTick();
+		float elapsed_time = current_time - last_time;
+		if (current_time - start_time >= ms) {
+			car_brake();
+			return;
+		}
+		if (elapsed_time >= control_interval)
+		{
+			last_time = current_time;
+
+			float yaw = get_yaw();
+
+			// 2. Compute PID output
+			float dt = control_interval / 1000.0f; // Convert ms to seconds
+			stabilization_yaw = PID_Update(&pid_yaw, desired_yaw, yaw, dt);
+
+			// 3. Execute movement command with stabilization
+			// Example: Move forward at speed 50
+			// Base speed commands
+			int32_t base_speed_front_left = speed;
+			int32_t base_speed_front_right = -speed;
+			int32_t base_speed_rear_left = -speed;
+			int32_t base_speed_rear_right = speed;
+
+			// Apply yaw stabilization adjustments
+			base_speed_front_left += stabilization_yaw;
+			base_speed_rear_left -= stabilization_yaw;
+			base_speed_front_right -= stabilization_yaw;
+			base_speed_rear_right += stabilization_yaw;
+
+			// Limit speeds to [MIN_SPEED, MAX_SPEED]
+			base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
+			base_speed_front_right = (base_speed_front_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_right < MIN_SPEED) ? MIN_SPEED : base_speed_front_right);
+			base_speed_rear_left = (base_speed_rear_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_left < MIN_SPEED) ? MIN_SPEED : base_speed_rear_left);
+			base_speed_rear_right = (base_speed_rear_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_right < MIN_SPEED) ? MIN_SPEED : base_speed_rear_right);
+
+			// Set motor speeds
+			set_speed(1, base_speed_rear_left);    // Left Rear
+			set_speed(2, base_speed_front_right);  // Right Front
+			set_speed(3, base_speed_front_left);   // Left Front
+			set_speed(4, base_speed_rear_right);   // Right Rear
+		}
+	}
 }
 
-void car_move_left(int32_t speed) {
-	set_speed(3, -speed);
-	set_speed(4, -speed);
-	set_speed(1, speed);
-	set_speed(2, speed);
+void car_move_left(int32_t speed, uint32_t ms) {
+//	set_speed(3, -speed);
+//	set_speed(4, -speed);
+//	set_speed(1, speed);
+//	set_speed(2, speed);
+	car_move_right(-speed, ms);
 }
 
 
-// Spin the car left by rotating left wheels backward and right wheels forward
 void car_spin_left(int32_t speed)
 {
-    set_speed(1, speed); // Left front motor backward
-    set_speed(2, speed);  // Right front motor forward
-    set_speed(3, speed); // Left rear motor backward
-    set_speed(4, speed);  // Right rear motor forward
+    set_speed(1, speed);
+    set_speed(2, speed);
+    set_speed(3, speed);
+    set_speed(4, speed);
 }
 
-// Spin the car right by rotating right wheels backward and left wheels forward
 void car_spin_right(int32_t speed)
 {
-    set_speed(1, -speed);  // Left front motor forward
-    set_speed(2, -speed); // Right front motor backward
-    set_speed(3, -speed);  // Left rear motor forward
-    set_speed(4, -speed); // Right rear motor backward
+    set_speed(1, -speed);
+    set_speed(2, -speed);
+    set_speed(3, -speed);
+    set_speed(4, -speed);
 }
 
 void car_turn_around_right() {
@@ -615,25 +748,17 @@ void car_turn_around_left() {
 }
 
 void car_run_up_one() {
-	car_run(80);
-	HAL_Delay(2300);
-	car_brake();
+	car_run(90, 1800);
 }
 
 void car_run_down_one() {
-	car_run(-80);
-	HAL_Delay(2300);
-	car_brake();
+	car_run(-90, 1700);
 }
 
 void car_run_left_one() {
-	car_move_left(80);
-	HAL_Delay(2300);
-	car_brake();
+	car_move_left(90, 2450);
 }
 
 void car_run_right_one() {
-	car_move_right(80);
-	HAL_Delay(2300);
-	car_brake();
+	car_move_right(90, 2450);
 }

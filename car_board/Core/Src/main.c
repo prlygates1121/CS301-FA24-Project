@@ -22,6 +22,7 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include "demo.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -29,6 +30,8 @@
 #include "utils.h"
 #include "strings.h"
 #include "24l01.h"
+#include "atk_ms6050.h"
+#include "inv_mpu.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +57,7 @@ uint32_t current_millis = 0;
 uint8_t nrf_rx_buf[32] = {0};
 uint8_t nrf_tx_buf[32] = {0};
 uint8_t command_ready = 0;
+extern float desired_yaw;
 
 /* USER CODE END PV */
 
@@ -116,7 +120,6 @@ int main(void)
   // Adjust servo
   turn_joint(AHEAD);
 
-
   // Check if NRF24L01 module is working
   while (NRF24L01_Check()) {
 	  HAL_Delay(100);
@@ -127,8 +130,38 @@ int main(void)
   // Test communication with the control board
   test_communication();
 
+  uint8_t ret;
+  /* 初始化ATK-MS6050 */
+  ret = atk_ms6050_init();
+  if (ret != 0)
+  {
+//      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 init failed!\r\n", strlen("ATK-MS6050 init failed!\r\n"), HAL_MAX_DELAY);
+      while (1)
+      {
+      	TOGGLE_LED1;
+          HAL_Delay(200);
+      }
+  }
+
+  /* 初始化ATK-MS6050 DMP */
+  ret = atk_ms6050_dmp_init();
+  if (ret != 0)
+  {
+//      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 DMP init failed!\r\n", strlen("ATK-MS6050 DMP init failed!\r\n"), HAL_MAX_DELAY);
+      while (1)
+      {
+      	TOGGLE_LED2;
+          HAL_Delay(200);
+      }
+  }
+
+  HAL_Delay(20000);
+  desired_yaw = get_yaw();
+
+
   NRF24L01_RX_Mode();
   command_ready = 0;
+//  demo_run();
   /* USER CODE END 2 */
 
   /* Infinite loop */

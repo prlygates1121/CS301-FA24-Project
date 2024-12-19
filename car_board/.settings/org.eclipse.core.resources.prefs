@@ -1,4 +1,8 @@
 eclipse.preferences.version=1
 encoding//Core/Inc/spi.h=GBK
+encoding//Core/Src/demo.c=GBK
 encoding//Core/Src/spi.c=GBK
+encoding//Drivers/ATK_MS6050/atk_ms6050_iic.c=GBK
+encoding//Drivers/ATK_MS6050/atk_ms6050_iic.h=GBK
+encoding//Drivers/ATK_MS6050/eMPL/inv_mpu.c=GBK
 encoding/<project>=UTF-8

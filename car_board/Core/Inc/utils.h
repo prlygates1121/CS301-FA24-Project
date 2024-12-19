@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 /* ------------------------------------------------ Macros ------------------------------------------------ */
 
 // Buttons
@@ -83,13 +85,14 @@ void process_command(uint8_t command[]);
 
 /* -------------------------------------------- Motor Functions -------------------------------------------- */
 
+float get_yaw(void);
 void set_speed(uint8_t channel, int32_t speed);
-void car_run(int32_t speed);
+void car_run(int32_t speed, uint32_t ms);
 void car_brake();
 void car_turn_left(int32_t speed);
 void car_turn_right(int32_t speed);
-void car_move_right(int32_t speed);
-void car_move_left(int32_t speed);
+void car_move_right(int32_t speed, uint32_t ms);
+void car_move_left(int32_t speed, uint32_t ms);
 void car_spin_left(int32_t speed);
 void car_spin_right(int32_t speed);
 void car_turn_around_right();
