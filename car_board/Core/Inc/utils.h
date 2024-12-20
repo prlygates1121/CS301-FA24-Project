@@ -61,6 +61,24 @@
 #define LEFT 1
 #define RIGHT 2
 
+// 循迹
+#define SEARCH_R_PIN       GPIO_PIN_13  // 定义右侧搜索引脚为GPIO的第13引脚
+#define SEARCH_R_GPIO      GPIOC        // 定义右侧搜索引脚所在的GPIO组为GPIOC
+#define SEARCH_R_IO        HAL_GPIO_ReadPin(SEARCH_R_GPIO, SEARCH_R_PIN)  // 定义一个宏，用于读取右侧搜索引脚的输入数据位
+
+#define SEARCH_L_PIN       GPIO_PIN_11  // 定义左侧搜索引脚为GPIO的第11引脚
+#define SEARCH_L_GPIO      GPIOC        // 定义左侧搜索引脚所在的GPIO组同样为GPIOC
+#define SEARCH_L_IO        HAL_GPIO_ReadPin(SEARCH_L_GPIO, SEARCH_L_PIN)  // 定义一个宏，用于读取左侧搜索引脚的输入数据位
+
+#define BLACK_AREA         1            // 定义黑色区域的值为1
+#define WHITE_AREA         0            // 定义白色区域的值为0
+
+#define COMM_UP 'A'
+#define COMM_DOWN 'B'
+#define COMM_LEFT 'C'
+#define COMM_RIGHT 'D'
+#define COMM_STOP 'I'
+
 extern float US_distance;
 
 /* --------------------------------------------- Custom Delay ---------------------------------------------- */
@@ -101,3 +119,6 @@ void car_run_up_one();
 void car_run_down_one();
 void car_run_left_one();
 void car_run_right_one();
+
+/* -------------------------------------------- Routing Functions -------------------------------------------- */
+void SearchRun(void);

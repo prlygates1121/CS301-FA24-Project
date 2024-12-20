@@ -518,7 +518,6 @@ float PID_Update(PID_Controller *pid, float setpoint, float measured, float dt)
 void set_speed(uint8_t channel, int32_t speed)
 {
     uint16_t pwm_value;
-
     // Limit speed range to [-100, 100]
     if (speed > 100) speed = 100;
     if (speed < -100) speed = -100;
@@ -761,4 +760,63 @@ void car_run_left_one() {
 
 void car_run_right_one() {
 	car_move_right(90, 2450);
+}
+
+/* -------------------------------------------- Routing Functions -------------------------------------------- */
+char ctrl_comm_last = COMM_STOP; // 上一次的指令
+char ctrl_comm; // 本次的指令
+
+void IRSearchInit(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure; // 创建一个GPIO初始化结构体变量
+
+    // 使能GPIOC的时钟
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+
+    // 配置右侧搜索引脚
+    GPIO_InitStructure.Pin = SEARCH_R_PIN; // 配置使能GPIO管脚为SEARCH_R_PIN
+    GPIO_InitStructure.Mode = GPIO_PULLUP; // 配置GPIO模式为输入上拉（Input Pull Up）
+    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH; // 配置GPIO端口速度为50MHz
+    HAL_GPIO_Init(SEARCH_R_GPIO, &GPIO_InitStructure); // 初始化SEARCH_R_GPIO
+
+    // 配置左侧搜索引脚
+    GPIO_InitStructure.Pin = SEARCH_L_PIN; // 配置使能GPIO管脚为SEARCH_L_PIN
+    GPIO_InitStructure.Mode = GPIO_PULLUP; // 配置GPIO模式为输入上拉（Input Pull Up）
+    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH; // 配置GPIO端口速度为50MHz
+    HAL_GPIO_Init(SEARCH_L_GPIO, &GPIO_InitStructure); // 初始化SEARCH_L_GPIO
+}
+
+void SearchRun(void) {
+    if(SEARCH_L_IO == WHITE_AREA && SEARCH_R_IO == WHITE_AREA)
+        ctrl_comm = COMM_UP;  // 两边数值相同
+    else if (IR_L_GROUND_BLACK && IR_R_GROUND_WHITE)
+        ctrl_comm = COMM_LEFT;
+    else if (IR_R_GROUND_BLACK && IR_L_GROUND_WHITE)
+        ctrl_comm = COMM_RIGHT;
+    else
+        ctrl_comm = COMM_STOP;
+
+    if(ctrl_comm_last != ctrl_comm)
+    {
+        ctrl_comm_last = ctrl_comm;
+        switch(ctrl_comm)
+        {
+            case COMM_UP:
+                set_speed(1, -10);
+                set_speed(2, 10);
+                set_speed(3, 10);
+                set_speed(4, -10);
+                break;
+            case COMM_DOWN:
+            	set_speed(1, 10);
+            	set_speed(2, -10);
+            	set_speed(3, -10);
+            	set_speed(4, 10);
+            	break;
+            case COMM_RIGHT: car_spin_right(5); break;
+            case COMM_LEFT:  car_spin_left(5); break;
+            case COMM_STOP:  car_brake(10); break;
+            default: break;
+        }
+    }
 }

@@ -108,15 +108,27 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  // 循迹/////////////////////////////////////////////////////////////////////////
+    IRSearchInit();
+    while (1) {
+  	  SearchRun();
+    }
+    TURN_ON_LED1;
+   ///////////////////////////////////////////////////////////////////////////
+
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
+
+
   TURN_OFF_BUZZER;
   car_brake();
   NRF24L01_Init();
+
+
   // Adjust servo
   turn_joint(AHEAD);
 
@@ -138,7 +150,7 @@ int main(void)
 //      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 init failed!\r\n", strlen("ATK-MS6050 init failed!\r\n"), HAL_MAX_DELAY);
       while (1)
       {
-      	TOGGLE_LED1;
+    	  TOGGLE_LED1;
           HAL_Delay(200);
       }
   }
