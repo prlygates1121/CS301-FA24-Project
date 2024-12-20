@@ -20,7 +20,9 @@
 #include "main.h"
 #include "spi.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
+#include "demo.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -28,6 +30,8 @@
 #include "utils.h"
 #include "strings.h"
 #include "24l01.h"
+#include "atk_ms6050.h"
+#include "inv_mpu.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,8 +52,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t rx_buf[32] = {0};
+const uint32_t interval_millis = 500;
+uint32_t current_millis = 0;
+uint8_t nrf_rx_buf[32] = {0};
+uint8_t nrf_tx_buf[32] = {0};
 uint8_t command_ready = 0;
+extern float desired_yaw;
 
 /* USER CODE END PV */
 
@@ -98,17 +106,38 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM4_Init();
   MX_SPI1_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  // 循迹/////////////////////////////////////////////////////////////////////////
+//    IRSearchInit();
+//    while (1) {
+//  	  SearchRun();
+//    }
+//    TURN_ON_LED1;
+   ///////////////////////////////////////////////////////////////////////////
+
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
+
+  /*循迹*/
+  while (1) {
+	  SearchRun();
+  }
+
+
   TURN_OFF_BUZZER;
   car_brake();
   NRF24L01_Init();
-  // Check if NRF24L01 module is
+
+
+  // Adjust servo
+  turn_joint(AHEAD);
+
+  // Check if NRF24L01 module is working
   while (NRF24L01_Check()) {
 	  HAL_Delay(100);
 	  TURN_ON_LED1;
@@ -118,8 +147,38 @@ int main(void)
   // Test communication with the control board
   test_communication();
 
+  uint8_t ret;
+  /* 初始化ATK-MS6050 */
+  ret = atk_ms6050_init();
+  if (ret != 0)
+  {
+//      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 init failed!\r\n", strlen("ATK-MS6050 init failed!\r\n"), HAL_MAX_DELAY);
+      while (1)
+      {
+    	  TOGGLE_LED1;
+          HAL_Delay(200);
+      }
+  }
+
+  /* 初始化ATK-MS6050 DMP */
+  ret = atk_ms6050_dmp_init();
+  if (ret != 0)
+  {
+//      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 DMP init failed!\r\n", strlen("ATK-MS6050 DMP init failed!\r\n"), HAL_MAX_DELAY);
+      while (1)
+      {
+      	TOGGLE_LED2;
+          HAL_Delay(200);
+      }
+  }
+
+  HAL_Delay(20000);
+  desired_yaw = get_yaw();
+
 
   NRF24L01_RX_Mode();
+  command_ready = 0;
+//  demo_run();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -127,9 +186,19 @@ int main(void)
 while (1)
   {
 	if (command_ready) {
-		process_command(rx_buf);
+//		HAL_UART_Transmit(&huart1, what, 1, HAL_MAX_DELAY);
+		process_command(nrf_rx_buf);
 		command_ready = 0;
 	}
+	if (HAL_GetTick() - current_millis >= interval_millis) {
+		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		uint8_t distance_fetched = get_distance();
+		nrf_tx_buf[0] = 0;
+		nrf_tx_buf[1] = distance_fetched;
+		nrf_send(nrf_tx_buf, 0);
+		current_millis = HAL_GetTick();
+	}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

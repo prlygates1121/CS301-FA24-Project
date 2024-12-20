@@ -45,8 +45,8 @@ void NRF24L01_Init(void)
 //	HAL_GPIO_Init(GPIOA,&GPIO_Initure);     //初始化
 //
 //	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_3,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
     
 	MX_SPI1_Init();    		                //初始化SPI1
     NRF24L01_SPI_Init();                    //针对NRF的特点修改SPI的设置
