@@ -213,7 +213,7 @@ float standard_angles[5] = {0, 90, 180, -90, -180};
 
 float target_angels[4] = {-90, 90, 180, 0};
 void car_spin_target(float target) {
-
+	// 电机动力不一样，所以速度不一样
 	set_speed(1, 50);    // Left Rear
 	set_speed(2, 60);  // Right Front
 	set_speed(3, 60);   // Left Front
