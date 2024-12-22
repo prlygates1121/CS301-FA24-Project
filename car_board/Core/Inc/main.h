@@ -87,6 +87,8 @@ void Error_Handler(void);
 #define BUZZER_GPIO_Port GPIOA
 #define IR_GND_L_Pin GPIO_PIN_11
 #define IR_GND_L_GPIO_Port GPIOC
+#define IR_GND_M_Pin GPIO_PIN_12
+#define IR_GND_M_GPIO_Port GPIOC
 #define LED2_Pin GPIO_PIN_2
 #define LED2_GPIO_Port GPIOD
 #define IR_OBST_R_Pin GPIO_PIN_4

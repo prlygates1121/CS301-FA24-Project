@@ -22,7 +22,6 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "demo.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -108,13 +107,6 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  // 循迹/////////////////////////////////////////////////////////////////////////
-    IRSearchInit();
-    while (1) {
-  	  SearchRun();
-    }
-    TURN_ON_LED1;
-   ///////////////////////////////////////////////////////////////////////////
 
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
@@ -123,6 +115,43 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
 
+  car_brake();
+
+  /*探测*/
+  uint8_t ret;
+    /* 初始化ATK-MS6050 */
+    ret = atk_ms6050_init();
+    if (ret != 0)
+    {
+  //      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 init failed!\r\n", strlen("ATK-MS6050 init failed!\r\n"), HAL_MAX_DELAY);
+        while (1)
+        {
+      	  TOGGLE_LED1;
+            HAL_Delay(200);
+        }
+    }
+
+    /* 初始化ATK-MS6050 DMP */
+    ret = atk_ms6050_dmp_init();
+    if (ret != 0)
+    {
+  //      HAL_UART_Transmit(&huart1, (uint8_t*)"ATK-MS6050 DMP init failed!\r\n", strlen("ATK-MS6050 DMP init failed!\r\n"), HAL_MAX_DELAY);
+        while (1)
+        {
+        	TOGGLE_LED2;
+            HAL_Delay(200);
+        }
+    }
+
+    //HAL_Delay(20000);
+    desired_yaw = get_yaw();
+  /////////////////////////////////////////////////////////
+    car_run_up_one(0);
+//  dfs(3, 0);
+//  go_through(3, 0);
+//  TURN_ON_LED1;
+  while(1){continue;}
+  /////////////////////////////////////////////////////////
 
   TURN_OFF_BUZZER;
   car_brake();
@@ -142,7 +171,7 @@ int main(void)
   // Test communication with the control board
   test_communication();
 
-  uint8_t ret;
+  //uint8_t ret;
   /* 初始化ATK-MS6050 */
   ret = atk_ms6050_init();
   if (ret != 0)

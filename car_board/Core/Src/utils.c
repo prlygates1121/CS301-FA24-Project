@@ -104,6 +104,8 @@ uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking) {
 //    {0, 1, 0, 0},
 //    {0, 0, 0, 1},
 //};
+
+//默认0度是面向上
 int graph[4][4] = {
     {0, 0, 0, 0},
     {0, 0, 0, 0},
@@ -117,11 +119,11 @@ uint8_t point[2];											//小车坐标
 int total_obstacle = 5;
 int obstacle_cnt = 0;
 int clear_cnt = 1;
-int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1},};	//右、左、后、前
+int step[4][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0},};	//右、左、后、前
 uint32_t dist[1];
 
 //模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
-void detect(int x, int y, uint8_t next_step[]) {
+void detect(int x, int y, uint8_t *next_step) {
 	uint8_t detect_command[32] = {0};
 	// 探测四个方向有无障碍
 	for(int i=0; i<4; i++) {
@@ -144,7 +146,7 @@ void detect(int x, int y, uint8_t next_step[]) {
 					turn_joint(LEFT);
 					break;
 				// 转过头看后边
-				case 2:
+				case 2://////////////////////////////////////////可能没必要
 					turn_joint(AHEAD);
 					car_turn_around_right();
 					break;
@@ -194,6 +196,54 @@ void detect(int x, int y, uint8_t next_step[]) {
 
 uint8_t current_pos[2];
 
+float standard_angles[5] = {0, 90, 180, -90, -180};
+float get_target_angle(float angle0, int direction) {
+	float standard_angle0;
+	float min_abs = 90;
+	for(int i=0; i<5; i++) {
+		float delta_angle = angle0 - standard_angles[i];
+		delta_angle = delta_angle>=0 ? delta_angle : -delta_angle; //取绝对值
+		if(delta_angle < min_abs) {
+			standard_angle0 = standard_angles[i];
+			min_abs = delta_angle;
+		}
+	}
+	standard_angle0 = (standard_angle0 == -180) ? 180 : standard_angle0; //+-180等同
+	float result_angle = 0;
+	switch (direction) {
+	case 0://右
+		result_angle = (standard_angle0 == -90) ? 180 : standard_angle0 - 90;
+		break;
+	case 1://左
+		result_angle = (standard_angle0 == 180) ? -90 : standard_angle0 + 90;
+		break;
+	case 2://后
+		result_angle = (standard_angle0 > 0) ? standard_angle0 - 180 : standard_angle0 + 180;
+		break;
+	case 3://前
+		result_angle = standard_angle0;
+		break;
+	}
+	return result_angle;
+}
+
+void car_spin_target(float target) {
+	set_speed(1, 60);    // Left Rear
+	set_speed(2, 60);  // Right Front
+	set_speed(3, 60);   // Left Front
+	set_speed(4, 60);   // Right Rear
+	while(1) {
+		float now_angle = get_yaw();
+		if (now_angle - target > -5 && now_angle - target < 5) {
+			TOGGLE_LED2;
+			car_brake();
+			HAL_Delay(200);
+			TOGGLE_LED2;
+			break;
+		}
+	}
+}
+
 uint8_t dfs(int x, int y) {
 	uint8_t dfs_command[32] = {0};
 	uint8_t to_end = 0; //是否能到终点
@@ -206,27 +256,36 @@ uint8_t dfs(int x, int y) {
 			//可以走，就走
 			point[0] = x + step[i][0];
 			point[1] = y + step[i][1];
-
-			switch (i) {
-				// 往右走一格
-				case 0:
-					car_run_right_one();
-					break;
-				// 往左走一格
-				case 1:
-					car_run_left_one();
-					break;
-				// 往后走一格
-				case 2:
-					car_run_down_one();
-					break;
-				// 往前走一格
-				case 3:
-					car_run_up_one();
-					break;
-				default:
-					break;
-			}
+			float in_angle = get_yaw();
+			float target_angle = get_target_angle(in_angle, i);
+			car_spin_target(target_angle);
+			car_run_up_one(target_angle);
+//			switch (i) {
+//				// 往右走一格
+//				case 0:
+//					//TODO:右 转90度
+//
+//					//car_run_right_one();
+//					break;
+//				// 往左走一格
+//				case 1:
+//					//TODO:左转90度
+//					car_run_up_one();
+//					//car_run_left_one();
+//					break;
+//				// 往后走一格
+//				case 2:
+//					//TODO:转180度
+//					car_run_up_one();
+//					//car_run_down_one();
+//					break;
+//				// 往前走一格
+//				case 3:
+//					car_run_up_one();
+//					break;
+//				default:
+//					break;
+//			}
 			sprintf(DATA_TO_SEND, "DFS dives deeper: (%d, %d)\n", x + step[i][0], y + step[i][1]);
 			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 			dfs_command[0] = 3;
@@ -236,26 +295,30 @@ uint8_t dfs(int x, int y) {
 			if (dfs(point[0], point[1])) {
 				to_end = 1;
 			}
-			switch (i) {
-				// 往左回一格
-				case 0:
-					car_run_left_one();
-					break;
-				// 往右回一格
-				case 1:
-					car_run_right_one();
-					break;
-				// 往前回一格
-				case 2:
-					car_run_up_one();
-					break;
-				// 往后回一格
-				case 3:
-					car_run_down_one();
-					break;
-				default:
-					break;
-			}
+			//使角度等于原角度+180，前进一格
+			target_angle = ((int)in_angle + 180) % 360;
+			car_spin_target(target_angle);
+			car_run_up_one(target_angle);
+//			switch (i) {
+//				// 往左回一格
+//				case 0:
+//					car_run_left_one();
+//					break;
+//				// 往右回一格
+//				case 1:
+//					car_run_right_one();
+//					break;
+//				// 往前回一格
+//				case 2:
+//					car_run_up_one();
+//					break;
+//				// 往后回一格
+//				case 3:
+//					car_run_down_one();
+//					break;
+//				default:
+//					break;
+//			}
 			point[0] = x;
 			point[1] = y;
 			sprintf(DATA_TO_SEND, "DFS floats up: (%d, %d)\n", x, y);
@@ -328,26 +391,38 @@ void go_through(int x, int y) {
 			point[0] = x_d;
 			point[1] = y_d;
 			//走
-			switch (i) {
-				// 往右走一格
-				case 0:
-					car_run_right_one();
-					break;
-				// 往左走一格
-				case 1:
-					car_run_left_one();
-					break;
-				// 往后走一格
-				case 2:
-					car_run_down_one();
-					break;
-				// 往前走一格
-				case 3:
-					car_run_up_one();
-					break;
-				default:
-					break;
-			}
+			float in_angle = get_yaw();
+			float target_angle = get_target_angle(in_angle, i);
+			car_spin_target(target_angle);
+			car_run_up_one(target_angle);
+//			switch (i) {
+//				// 往右走一格
+//				case 0:
+//					//TODO:右 转90度
+//
+//					car_run_up_one();
+//					//car_run_right_one();
+//					break;
+//				// 往左走一格
+//				case 1:
+//					//TODO:左转90度
+//					car_run_up_one();
+//					//car_run_left_one();
+//					break;
+//				// 往后走一格
+//				case 2:
+//					//TODO:转180度
+//					car_run_up_one();
+//					//car_run_down_one();
+//					break;
+//				// 往前走一格
+//				case 3:
+//					car_run_up_one();
+//					break;
+//				default:
+//					break;
+//			}
+
 			sprintf(DATA_TO_SEND, "On my way to the end: (%d, %d)\n", x_d, y_d);
 			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 			go_command[0] = 4;
@@ -453,7 +528,7 @@ void process_command(uint8_t command[]) {
 				}
 				switch (command[i]) {
 					case ROUTE_UP:
-						car_run_up_one();
+						car_run_up_one(0.0);
 						break;
 					case ROUTE_DOWN:
 						car_run_down_one();
@@ -746,12 +821,74 @@ void car_turn_around_left() {
 	car_brake();
 }
 
-void car_run_up_one() {
-	car_run(90, 1800);
+
+void car_run_up_one(float target_angle) {
+	int speed = 50;
+	int cnt = 0;
+	uint32_t last_time = HAL_GetTick();
+	uint32_t start_time, one_time; // 计算走一格的时间
+	const float control_interval = INTERVAL; // Control loop interval in milliseconds
+	while (cnt < 2) {
+		uint32_t current_time = HAL_GetTick();
+		float elapsed_time = current_time - last_time;
+		if (elapsed_time >= control_interval) //每隔一个时间段更新一次速度
+		{
+			last_time = current_time;
+
+			float yaw = get_yaw();
+			float dt = control_interval / 1000.0f; // Convert ms to seconds
+			stabilization_yaw = PID_Update(&pid_yaw, target_angle, yaw, dt);
+
+			// 3. Execute movement command with stabilization
+			// Example: Move forward at speed 50
+		    // Base speed commands
+		    int32_t base_speed_front_left = -speed;
+		    int32_t base_speed_front_right = speed;
+		    int32_t base_speed_rear_left = -speed;
+		    int32_t base_speed_rear_right = speed;
+
+		    // Apply yaw stabilization adjustments
+		    base_speed_front_left += stabilization_yaw;
+		    base_speed_rear_left += stabilization_yaw;
+		    base_speed_front_right += stabilization_yaw;
+		    base_speed_rear_right += stabilization_yaw;
+
+		    // Limit speeds to [MIN_SPEED, MAX_SPEED]
+		    base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
+		    base_speed_front_right = (base_speed_front_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_right < MIN_SPEED) ? MIN_SPEED : base_speed_front_right);
+		    base_speed_rear_left = (base_speed_rear_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_left < MIN_SPEED) ? MIN_SPEED : base_speed_rear_left);
+		    base_speed_rear_right = (base_speed_rear_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_right < MIN_SPEED) ? MIN_SPEED : base_speed_rear_right);
+
+		    // Set motor speeds
+		    set_speed(1, base_speed_rear_left);    // Left Rear
+		    set_speed(2, base_speed_front_right);  // Right Front
+		    set_speed(3, base_speed_front_left);   // Left Front
+		    set_speed(4, base_speed_rear_right);   // Right Rear
+		}
+		// 边界探测，前进只看中间的
+		if (IR_M_GROUND_BLACK) {
+			if (cnt == 0) {
+				start_time = HAL_GetTick();
+				cnt = -1; // 到达第一条线
+				TURN_ON_LED1;
+			} else if (cnt == 1) {
+				one_time = HAL_GetTick() - start_time;
+				if (one_time > 500) {
+					cnt = 2;
+					TURN_OFF_LED1;
+				}
+			}
+
+		} else if (cnt == -1) { // 越过第一条线
+			cnt = 1;
+		}
+	}
+	car_brake();
+	car_run(-speed, one_time / 2);
 }
 
 void car_run_down_one() {
-	car_run(-90, 1700);
+
 }
 
 void car_run_left_one() {
@@ -766,57 +903,144 @@ void car_run_right_one() {
 char ctrl_comm_last = COMM_STOP; // 上一次的指令
 char ctrl_comm; // 本次的指令
 
-void IRSearchInit(void)
-{
-    GPIO_InitTypeDef GPIO_InitStructure; // 创建一个GPIO初始化结构体变量
+//void IRSearchInit(void)
+//{
+//    GPIO_InitTypeDef GPIO_InitStructure; // 创建一个GPIO初始化结构体变量
+//
+//    // 使能GPIOC的时钟
+//    __HAL_RCC_GPIOC_CLK_ENABLE();
+//
+//    // 配置右侧搜索引脚
+//    GPIO_InitStructure.Pin = SEARCH_R_PIN; // 配置使能GPIO管脚为SEARCH_R_PIN
+//    GPIO_InitStructure.Mode = GPIO_PULLUP; // 配置GPIO模式为输入上拉（Input Pull Up）
+//    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH; // 配置GPIO端口速度为50MHz
+//    HAL_GPIO_Init(SEARCH_R_GPIO, &GPIO_InitStructure); // 初始化SEARCH_R_GPIO
+//
+//    // 配置左侧搜索引脚
+//    GPIO_InitStructure.Pin = SEARCH_L_PIN; // 配置使能GPIO管脚为SEARCH_L_PIN
+//    GPIO_InitStructure.Mode = GPIO_PULLUP; // 配置GPIO模式为输入上拉（Input Pull Up）
+//    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH; // 配置GPIO端口速度为50MHz
+//    HAL_GPIO_Init(SEARCH_L_GPIO, &GPIO_InitStructure); // 初始化SEARCH_L_GPIO
+//}
 
-    // 使能GPIOC的时钟
-    __HAL_RCC_GPIOC_CLK_ENABLE();
 
-    // 配置右侧搜索引脚
-    GPIO_InitStructure.Pin = SEARCH_R_PIN; // 配置使能GPIO管脚为SEARCH_R_PIN
-    GPIO_InitStructure.Mode = GPIO_PULLUP; // 配置GPIO模式为输入上拉（Input Pull Up）
-    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH; // 配置GPIO端口速度为50MHz
-    HAL_GPIO_Init(SEARCH_R_GPIO, &GPIO_InitStructure); // 初始化SEARCH_R_GPIO
-
-    // 配置左侧搜索引脚
-    GPIO_InitStructure.Pin = SEARCH_L_PIN; // 配置使能GPIO管脚为SEARCH_L_PIN
-    GPIO_InitStructure.Mode = GPIO_PULLUP; // 配置GPIO模式为输入上拉（Input Pull Up）
-    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH; // 配置GPIO端口速度为50MHz
-    HAL_GPIO_Init(SEARCH_L_GPIO, &GPIO_InitStructure); // 初始化SEARCH_L_GPIO
-}
+//#define IR_M_GROUND_WHITE (HAL_GPIO_ReadPin(IR_GND_M_GPIO_Port, IR_GND_M_Pin) == GPIO_PIN_RESET)
+//#define IR_M_GROUND_BLACK (HAL_GPIO_ReadPin(IR_GND_M_GPIO_Port, IR_GND_M_Pin) == GPIO_PIN_SET)
 
 void SearchRun(void) {
-    if(SEARCH_L_IO == WHITE_AREA && SEARCH_R_IO == WHITE_AREA)
-        ctrl_comm = COMM_UP;  // 两边数值相同
-    else if (IR_L_GROUND_BLACK && IR_R_GROUND_WHITE)
-        ctrl_comm = COMM_LEFT;
-    else if (IR_R_GROUND_BLACK && IR_L_GROUND_WHITE)
-        ctrl_comm = COMM_RIGHT;
-    else
-        ctrl_comm = COMM_STOP;
+    if(IR_R_GROUND_WHITE && IR_L_GROUND_WHITE && IR_M_GROUND_BLACK){
+    	//up
+    	ctrl_comm = COMM_UP;
+    	//3
+//    	TURN_ON_LED1;
+//    	TURN_ON_LED2;
+    }
+    else if (IR_L_GROUND_BLACK && IR_R_GROUND_WHITE){
+    	// left
+    	ctrl_comm = COMM_LEFT;
+    	//1
+//    	TURN_OFF_LED1;
+//    	TURN_ON_LED2;
+    }
+    else if (IR_R_GROUND_BLACK && IR_L_GROUND_WHITE){
+    	//right
+    	//2
+    	ctrl_comm = COMM_RIGHT;
+//    	TURN_ON_LED1;
+//    	TURN_OFF_LED2;
+    }else if (IR_M_GROUND_WHITE && IR_L_GROUND_WHITE && IR_R_GROUND_WHITE){
+    	//down
+    	if (ctrl_comm_last == COMM_LEFT){
+    		//左转
+    		//1
+    		TURN_OFF_LED1;
+    		TURN_ON_LED2;
+    		ctrl_comm = TURN_LEFT;
+    	}else if (ctrl_comm_last == COMM_RIGHT){
+    		//右转
+    		//2
+    		TURN_ON_LED1;
+    		TURN_OFF_LED2;
+    		ctrl_comm = TURN_RIGHT;
+    	}
+    }
+//    else{
+//    	//0
+//    	TURN_OFF_LED1;
+//    	TURN_OFF_LED2;
+//    	ctrl_comm = COMM_STOP;
+//    }
 
-    if(ctrl_comm_last != ctrl_comm)
-    {
-        ctrl_comm_last = ctrl_comm;
+
+//    if(ctrl_comm_last != ctrl_comm)
+//    {
+    	if (ctrl_comm != TURN_LEFT || ctrl_comm != TURN_RIGHT){
+    		ctrl_comm_last = ctrl_comm;
+    	}
         switch(ctrl_comm)
         {
             case COMM_UP:
-                set_speed(1, -10);
-                set_speed(2, 10);
-                set_speed(3, 10);
-                set_speed(4, -10);
+            	set_speed(1, -90);
+				set_speed(2, 90);
+				set_speed(3, -90);
+				set_speed(4, 90);
                 break;
             case COMM_DOWN:
-            	set_speed(1, 10);
-            	set_speed(2, -10);
-            	set_speed(3, -10);
-            	set_speed(4, 10);
+            	set_speed(1, 60);
+				set_speed(2, -60);
+				set_speed(3, 60);
+				set_speed(4, -60);
             	break;
-            case COMM_RIGHT: car_spin_right(5); break;
-            case COMM_LEFT:  car_spin_left(5); break;
-            case COMM_STOP:  car_brake(10); break;
+            case COMM_RIGHT:
+                set_speed(1, -70);
+                set_speed(2, -50);
+                set_speed(3, -70);
+                set_speed(4, -50);
+            	while(1)
+				{
+					if(IR_R_GROUND_WHITE)
+						car_brake();
+						break;
+				}
+            	break;
+            case COMM_LEFT:
+                set_speed(1, 50);
+                set_speed(2, 70);
+                set_speed(3, 50);
+                set_speed(4, 70);
+            	while(1)
+				{
+					if(IR_L_GROUND_WHITE)
+						car_brake();
+						break;
+				}
+            	break;
+            case COMM_STOP:
+            	car_brake();
+            	break;
+            case TURN_LEFT:
+            	car_brake();
+				 HAL_Delay(500);
+				 car_spin_left(55);
+//				 delay_tms(100);
+				 while(1)
+					{
+						if(IR_R_GROUND_BLACK && IR_M_GROUND_BLACK)
+							car_brake();
+							break;
+					}
+            case TURN_RIGHT:
+            	car_brake();
+				 HAL_Delay(500);
+				 car_spin_right(55);
+//				 delay_tms(100);
+				 while(1)
+					{
+						if(IR_R_GROUND_BLACK && IR_M_GROUND_BLACK)
+							car_brake();
+							break;
+					}
             default: break;
         }
-    }
+//    }
 }

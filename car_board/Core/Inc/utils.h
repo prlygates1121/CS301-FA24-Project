@@ -10,7 +10,7 @@
 #define TURN_ON_LED1 if (HAL_GPIO_ReadPin(LED1_GPIO_Port, LED1_Pin) == GPIO_PIN_SET) HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET)
 #define TURN_OFF_LED1 if (HAL_GPIO_ReadPin(LED1_GPIO_Port, LED1_Pin) == GPIO_PIN_RESET) HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET)
 #define TOGGLE_LED1 HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin)
-#define TURN_ON LED2 if (HAL_GPIO_ReadPin(LED2_GPIO_Port, LED2_Pin) == GPIO_PIN_SET) HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET)
+#define TURN_ON_LED2 if (HAL_GPIO_ReadPin(LED2_GPIO_Port, LED2_Pin) == GPIO_PIN_SET) HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET)
 #define TURN_OFF_LED2 if (HAL_GPIO_ReadPin(LED2_GPIO_Port, LED2_Pin) == GPIO_PIN_RESET) HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET)
 #define TOGGLE_LED2 HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin)
 
@@ -19,10 +19,14 @@
 #define IR_L_HAS_OBSTACLE (HAL_GPIO_ReadPin(IR_OBST_L_GPIO_Port, IR_OBST_L_Pin) == GPIO_PIN_RESET)
 
 // Detect ground color
+//#define IR_GND_M_Pin GPIO_PIN_12
+//#define IR_GND_M_GPIO_Port GPIOC
 #define IR_R_GROUND_WHITE (HAL_GPIO_ReadPin(IR_GND_R_GPIO_Port, IR_GND_R_Pin) == GPIO_PIN_RESET)
 #define IR_L_GROUND_WHITE (HAL_GPIO_ReadPin(IR_GND_L_GPIO_Port, IR_GND_L_Pin) == GPIO_PIN_RESET)
 #define IR_R_GROUND_BLACK (HAL_GPIO_ReadPin(IR_GND_R_GPIO_Port, IR_GND_R_Pin) == GPIO_PIN_SET)
 #define IR_L_GROUND_BLACK (HAL_GPIO_ReadPin(IR_GND_L_GPIO_Port, IR_GND_L_Pin) == GPIO_PIN_SET)
+#define IR_M_GROUND_WHITE (HAL_GPIO_ReadPin(IR_GND_M_GPIO_Port, IR_GND_M_Pin) == GPIO_PIN_RESET)
+#define IR_M_GROUND_BLACK (HAL_GPIO_ReadPin(IR_GND_M_GPIO_Port, IR_GND_M_Pin) == GPIO_PIN_SET)
 
 // Detect ultrasonic waves
 #define US_NOT_RECEIVED (HAL_GPIO_ReadPin(US_STATUS_GPIO_Port, US_STATUS_Pin) == GPIO_PIN_SET)
@@ -61,23 +65,25 @@
 #define LEFT 1
 #define RIGHT 2
 
-// 循迹
-#define SEARCH_R_PIN       GPIO_PIN_13  // 定义右侧搜索引脚为GPIO的第13引脚
-#define SEARCH_R_GPIO      GPIOC        // 定义右侧搜索引脚所在的GPIO组为GPIOC
-#define SEARCH_R_IO        HAL_GPIO_ReadPin(SEARCH_R_GPIO, SEARCH_R_PIN)  // 定义一个宏，用于读取右侧搜索引脚的输入数据位
-
-#define SEARCH_L_PIN       GPIO_PIN_11  // 定义左侧搜索引脚为GPIO的第11引脚
-#define SEARCH_L_GPIO      GPIOC        // 定义左侧搜索引脚所在的GPIO组同样为GPIOC
-#define SEARCH_L_IO        HAL_GPIO_ReadPin(SEARCH_L_GPIO, SEARCH_L_PIN)  // 定义一个宏，用于读取左侧搜索引脚的输入数据位
-
-#define BLACK_AREA         1            // 定义黑色区域的值为1
-#define WHITE_AREA         0            // 定义白色区域的值为0
+//// 循迹
+//#define SEARCH_R_PIN       GPIO_PIN_13  // 定义右侧搜索引脚为GPIO的第13引脚
+//#define SEARCH_R_GPIO      GPIOC        // 定义右侧搜索引脚所在的GPIO组为GPIOC
+//#define SEARCH_R_IO        HAL_GPIO_ReadPin(SEARCH_R_GPIO, SEARCH_R_PIN)  // 定义一个宏，用于读取右侧搜索引脚的输入数据位
+//
+//#define SEARCH_L_PIN       GPIO_PIN_11  // 定义左侧搜索引脚为GPIO的第11引脚
+//#define SEARCH_L_GPIO      GPIOC        // 定义左侧搜索引脚所在的GPIO组同样为GPIOC
+//#define SEARCH_L_IO        HAL_GPIO_ReadPin(SEARCH_L_GPIO, SEARCH_L_PIN)  // 定义一个宏，用于读取左侧搜索引脚的输入数据位
+//
+//#define BLACK_AREA         1            // 定义黑色区域的值为1
+//#define WHITE_AREA         0            // 定义白色区域的值为0
 
 #define COMM_UP 'A'
 #define COMM_DOWN 'B'
 #define COMM_LEFT 'C'
 #define COMM_RIGHT 'D'
 #define COMM_STOP 'I'
+#define TURN_LEFT 'L'
+#define TURN_RIGHT 'R'
 
 extern float US_distance;
 
@@ -115,10 +121,15 @@ void car_spin_left(int32_t speed);
 void car_spin_right(int32_t speed);
 void car_turn_around_right();
 void car_turn_around_left();
-void car_run_up_one();
+void car_run_up_one(float target_angle);
 void car_run_down_one();
 void car_run_left_one();
 void car_run_right_one();
 
 /* -------------------------------------------- Routing Functions -------------------------------------------- */
 void SearchRun(void);
+/* -------------------------------------------- Detection Functions -------------------------------------------- */
+float get_target_angle(float angle0, int direction);
+void car_spin_target(float target);
+uint8_t dfs(int x, int y);
+void go_through(int x, int y);

@@ -65,8 +65,10 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : IR_GND_R_Pin KEY1_Pin KEY2_Pin IR_GND_L_Pin */
-  GPIO_InitStruct.Pin = IR_GND_R_Pin|KEY1_Pin|KEY2_Pin|IR_GND_L_Pin;
+  /*Configure GPIO pins : IR_GND_R_Pin KEY1_Pin KEY2_Pin IR_GND_L_Pin
+                           IR_GND_M_Pin */
+  GPIO_InitStruct.Pin = IR_GND_R_Pin|KEY1_Pin|KEY2_Pin|IR_GND_L_Pin
+                          |IR_GND_M_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
