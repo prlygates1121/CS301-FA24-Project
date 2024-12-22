@@ -121,7 +121,6 @@ void car_spin_left(int32_t speed);
 void car_spin_right(int32_t speed);
 void car_turn_around_right();
 void car_turn_around_left();
-void car_run_up_one(float target_angle);
 void car_run_down_one();
 void car_run_left_one();
 void car_run_right_one();
@@ -129,7 +128,9 @@ void car_run_right_one();
 /* -------------------------------------------- Routing Functions -------------------------------------------- */
 void SearchRun(void);
 /* -------------------------------------------- Detection Functions -------------------------------------------- */
-float get_target_angle(float angle0, int direction);
-void car_spin_target(float target);
+void detection_test(int x, int y, int endx, int endy);
+void car_spin_target(float target); // 转到目标角度
 uint8_t dfs(int x, int y);
 void go_through(int x, int y);
+void car_run_up_one(float target_angle); //向前跑一格
+void car_run_up_ms(int32_t speed, uint32_t ms, float target_angle); //向前按特定角度走一定时间，用于后退

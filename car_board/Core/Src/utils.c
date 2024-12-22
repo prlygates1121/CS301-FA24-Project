@@ -121,9 +121,22 @@ int obstacle_cnt = 0;
 int clear_cnt = 1;
 int step[4][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0},};	//右、左、后、前
 uint32_t dist[1];
-
+char info[50];
 //模拟探路，实操改为探测前、左、右，并将后方坐标无条件加入返回数组
+void detection_test(int x, int y, int endx, int endy) {
+	start[0] = x;
+	start[1] = y;
+	end[0] = endx;
+	end[1] = endy;
+	point[0] = x;
+	point[1] = y;
+	graph[x][y] = 2;
+	dfs(3, 0);
+	go_through(3, 0);
+}
 void detect(int x, int y, uint8_t *next_step) {
+	sprintf(info, "position: %d, %d ", x, y);
+	HAL_UART_Transmit(&huart1, (uint8_t*)info, strlen(info), HAL_MAX_DELAY);
 	uint8_t detect_command[32] = {0};
 	// 探测四个方向有无障碍
 	for(int i=0; i<4; i++) {
@@ -164,7 +177,7 @@ void detect(int x, int y, uint8_t *next_step) {
 			nrf_tx_buf[0] = 0;
 			nrf_tx_buf[1] = dist[0];
 			nrf_send(nrf_tx_buf, 0);
-			if (dist[0] <= 90) {
+			if (dist[0] <= 50) {
 				//有障碍
 				TURN_ON_BUZZER;
 				graph[x_d][y_d] = 1;
@@ -197,41 +210,14 @@ void detect(int x, int y, uint8_t *next_step) {
 uint8_t current_pos[2];
 
 float standard_angles[5] = {0, 90, 180, -90, -180};
-float get_target_angle(float angle0, int direction) {
-	float standard_angle0;
-	float min_abs = 90;
-	for(int i=0; i<5; i++) {
-		float delta_angle = angle0 - standard_angles[i];
-		delta_angle = delta_angle>=0 ? delta_angle : -delta_angle; //取绝对值
-		if(delta_angle < min_abs) {
-			standard_angle0 = standard_angles[i];
-			min_abs = delta_angle;
-		}
-	}
-	standard_angle0 = (standard_angle0 == -180) ? 180 : standard_angle0; //+-180等同
-	float result_angle = 0;
-	switch (direction) {
-	case 0://右
-		result_angle = (standard_angle0 == -90) ? 180 : standard_angle0 - 90;
-		break;
-	case 1://左
-		result_angle = (standard_angle0 == 180) ? -90 : standard_angle0 + 90;
-		break;
-	case 2://后
-		result_angle = (standard_angle0 > 0) ? standard_angle0 - 180 : standard_angle0 + 180;
-		break;
-	case 3://前
-		result_angle = standard_angle0;
-		break;
-	}
-	return result_angle;
-}
 
+float target_angels[4] = {-90, 90, 180, 0};
 void car_spin_target(float target) {
-	set_speed(1, 60);    // Left Rear
+
+	set_speed(1, 50);    // Left Rear
 	set_speed(2, 60);  // Right Front
 	set_speed(3, 60);   // Left Front
-	set_speed(4, 60);   // Right Rear
+	set_speed(4, 50);   // Right Rear
 	while(1) {
 		float now_angle = get_yaw();
 		if (now_angle - target > -5 && now_angle - target < 5) {
@@ -257,7 +243,11 @@ uint8_t dfs(int x, int y) {
 			point[0] = x + step[i][0];
 			point[1] = y + step[i][1];
 			float in_angle = get_yaw();
-			float target_angle = get_target_angle(in_angle, i);
+			float target_angle = target_angels[i];
+			sprintf(info, "current angle: %.2f ", in_angle);
+			HAL_UART_Transmit(&huart1, (uint8_t*)info, strlen(info), HAL_MAX_DELAY);
+			sprintf(info, "target angle: %.2f ", target_angle);
+			HAL_UART_Transmit(&huart1, (uint8_t*)info, strlen(info), HAL_MAX_DELAY);
 			car_spin_target(target_angle);
 			car_run_up_one(target_angle);
 //			switch (i) {
@@ -296,7 +286,7 @@ uint8_t dfs(int x, int y) {
 				to_end = 1;
 			}
 			//使角度等于原角度+180，前进一格
-			target_angle = ((int)in_angle + 180) % 360;
+			target_angle = ((int)target_angle + 180) % 360;
 			car_spin_target(target_angle);
 			car_run_up_one(target_angle);
 //			switch (i) {
@@ -333,6 +323,12 @@ uint8_t dfs(int x, int y) {
 	if ((x == end[0]) && (y == end[1])) {
 		if (obstacle_cnt == total_obstacle) {
 			//到终点时找全了,就停着不走了
+			/////////////////////////////////////////////////
+			while(1) {
+				TOGGLE_LED1;
+				HAL_Delay(200);
+			}
+			/////////////////////////////////////////////////
 			for (int x_show=0; x_show<4; x_show++) {
 				for (int y_show=0; y_show<4; y_show++) {
 					if (graph[x_show][y_show] == 1) {
@@ -347,6 +343,12 @@ uint8_t dfs(int x, int y) {
 			HAL_Delay(100000);
 		} else if (clear_cnt == 16 - total_obstacle) {
 			//到终点时找全了,就停着不走了
+			/////////////////////////////////////////////////
+			while(1) {
+				TOGGLE_LED1;
+				HAL_Delay(200);
+			}
+			/////////////////////////////////////////////////
 			for (int i=0; i<4; i++) {
 				for (int j=0; j<4; j++) {
 					if (!graph[i][j]) {
@@ -392,7 +394,7 @@ void go_through(int x, int y) {
 			point[1] = y_d;
 			//走
 			float in_angle = get_yaw();
-			float target_angle = get_target_angle(in_angle, i);
+			float target_angle = target_angels[i];
 			car_spin_target(target_angle);
 			car_run_up_one(target_angle);
 //			switch (i) {
@@ -431,6 +433,12 @@ void go_through(int x, int y) {
 			nrf_send(go_command, 0);
 			//如果已经到了终点
 			if (x_d == end[0] && y_d == end[1]) {
+				/////////////////////////////////////////////////
+				while(1) {
+					TOGGLE_LED1;
+					HAL_Delay(200);
+				}
+				/////////////////////////////////////////////////
 				if (obstacle_cnt != total_obstacle) {
 					for (int k=0; k<4; k++) {
 						for (int j=0; j<4; j++) {
@@ -823,7 +831,7 @@ void car_turn_around_left() {
 
 
 void car_run_up_one(float target_angle) {
-	int speed = 50;
+	int speed = 60;
 	int cnt = 0;
 	uint32_t last_time = HAL_GetTick();
 	uint32_t start_time, one_time; // 计算走一格的时间
@@ -848,10 +856,10 @@ void car_run_up_one(float target_angle) {
 		    int32_t base_speed_rear_right = speed;
 
 		    // Apply yaw stabilization adjustments
-		    base_speed_front_left += stabilization_yaw;
-		    base_speed_rear_left += stabilization_yaw;
-		    base_speed_front_right += stabilization_yaw;
-		    base_speed_rear_right += stabilization_yaw;
+//		    base_speed_front_left += stabilization_yaw;
+//		    base_speed_rear_left += stabilization_yaw;
+//		    base_speed_front_right += stabilization_yaw;
+//		    base_speed_rear_right += stabilization_yaw;
 
 		    // Limit speeds to [MIN_SPEED, MAX_SPEED]
 		    base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
@@ -884,7 +892,61 @@ void car_run_up_one(float target_angle) {
 		}
 	}
 	car_brake();
-	car_run(-speed, one_time / 2);
+	car_run_up_ms(-speed, one_time / 2, target_angle);
+	car_spin_target(0);
+}
+
+void car_run_up_ms(int32_t speed, uint32_t ms, float target_angle) {
+	uint32_t start_time = HAL_GetTick();
+	uint32_t last_time = start_time;
+	const float control_interval = INTERVAL; // Control loop interval in milliseconds
+
+	while (1)
+	{
+		uint32_t current_time = HAL_GetTick();
+		float elapsed_time = current_time - last_time;
+		if (current_time - start_time >= ms) {
+			car_brake();
+			return;
+		}
+		if (elapsed_time >= control_interval)
+		{
+			last_time = current_time;
+
+			float yaw = get_yaw();
+
+			// 2. Compute PID output
+			float dt = control_interval / 1000.0f; // Convert ms to seconds
+			stabilization_yaw = PID_Update(&pid_yaw, target_angle, yaw, dt);
+
+			// 3. Execute movement command with stabilization
+			// Example: Move forward at speed 50
+		    // Base speed commands
+		    int32_t base_speed_front_left = -speed;
+		    int32_t base_speed_front_right = speed;
+		    int32_t base_speed_rear_left = -speed;
+		    int32_t base_speed_rear_right = speed;
+
+		    // Apply yaw stabilization adjustments
+//		    base_speed_front_left += stabilization_yaw;
+//		    base_speed_rear_left += stabilization_yaw;
+//		    base_speed_front_right += stabilization_yaw;
+//		    base_speed_rear_right += stabilization_yaw;
+
+		    // Limit speeds to [MIN_SPEED, MAX_SPEED]
+		    base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
+		    base_speed_front_right = (base_speed_front_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_right < MIN_SPEED) ? MIN_SPEED : base_speed_front_right);
+		    base_speed_rear_left = (base_speed_rear_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_left < MIN_SPEED) ? MIN_SPEED : base_speed_rear_left);
+		    base_speed_rear_right = (base_speed_rear_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_right < MIN_SPEED) ? MIN_SPEED : base_speed_rear_right);
+
+		    // Set motor speeds
+		    set_speed(1, base_speed_rear_left);    // Left Rear
+		    set_speed(2, base_speed_front_right);  // Right Front
+		    set_speed(3, base_speed_front_left);   // Left Front
+		    set_speed(4, base_speed_rear_right);   // Right Rear
+		}
+	}
+
 }
 
 void car_run_down_one() {

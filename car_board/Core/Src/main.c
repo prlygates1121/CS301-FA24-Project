@@ -146,10 +146,9 @@ int main(void)
     //HAL_Delay(20000);
     desired_yaw = get_yaw();
   /////////////////////////////////////////////////////////
-    car_run_up_one(0);
-//  dfs(3, 0);
-//  go_through(3, 0);
-//  TURN_ON_LED1;
+    //car_run_up_one();
+    detection_test(3, 0, 0, 3);
+  //TURN_ON_LED1;
   while(1){continue;}
   /////////////////////////////////////////////////////////
 
