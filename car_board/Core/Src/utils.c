@@ -85,6 +85,9 @@ void test_communication() {
 	TURN_OFF_LED1;
 }
 
+float desired_yaw = 0.0f;
+
+
 uint8_t nrf_send(uint8_t* txbuf, uint8_t blocking) {
 	uint8_t return_val;
 	NRF24L01_TX_Mode();
@@ -471,19 +474,19 @@ void go_through(int x, int y) {
 void process_command(uint8_t command[]) {
 	switch (command[0]) {
 		case MOVE_FORWARD:
-			car_run(65, 500);
+			car_run(65, 1500);
 			car_brake();
 			break;
 		case MOVE_BACKWARD:
-			car_run(-65, 500);
+			car_run(-65, 1500);
 			car_brake();
 			break;
 		case MOVE_LEFT:
-			car_move_left(65, 500);
+			car_move_left(65, 1500);
 			car_brake();
 			break;
 		case MOVE_RIGHT:
-			car_move_right(65, 500);
+			car_move_right(65, 1500);
 			car_brake();
 			break;
 		case SPIN_LEFT:
@@ -536,16 +539,20 @@ void process_command(uint8_t command[]) {
 				}
 				switch (command[i]) {
 					case ROUTE_UP:
-						car_run_up_one(0.0);
+						car_spin_target(desired_yaw);
+						car_run_up_one(desired_yaw);
 						break;
 					case ROUTE_DOWN:
-						car_run_down_one();
+						car_spin_target(desired_yaw + 180);
+						car_run_up_one(desired_yaw + 180);
 						break;
 					case ROUTE_LEFT:
-						car_run_left_one();
+						car_spin_target(desired_yaw + 90);
+						car_run_up_one(desired_yaw + 90);
 						break;
 					case ROUTE_RIGHT:
-						car_run_right_one();
+						car_spin_target(desired_yaw-90);
+						car_run_up_one(desired_yaw-90);
 						break;
 				}
 				HAL_Delay(500);
@@ -575,7 +582,6 @@ typedef struct {
 // PID_Controller pid_yaw = {2.f, 0.0f, -0.5f, 0.0f, 0.0f};
 PID_Controller pid_yaw = {2.f, 0.f, -0.5f, 0.0f, 0.0f};
 float stabilization_yaw = 0.0f;
-float desired_yaw = 0.0f;
 
 // Function Prototypes
 float PID_Update(PID_Controller *pid, float setpoint, float measured, float dt);
@@ -676,10 +682,10 @@ void car_run(int32_t speed, uint32_t ms)
 		    int32_t base_speed_rear_right = speed;
 
 		    // Apply yaw stabilization adjustments
-		    base_speed_front_left += stabilization_yaw;
-		    base_speed_rear_left += stabilization_yaw;
-		    base_speed_front_right += stabilization_yaw;
-		    base_speed_rear_right += stabilization_yaw;
+//		    base_speed_front_left += stabilization_yaw;
+//		    base_speed_rear_left += stabilization_yaw;
+//		    base_speed_front_right += stabilization_yaw;
+//		    base_speed_rear_right += stabilization_yaw;
 
 		    // Limit speeds to [MIN_SPEED, MAX_SPEED]
 		    base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
@@ -728,68 +734,21 @@ void car_turn_right(int32_t speed)
 }
 
 void car_move_right(int32_t speed, uint32_t ms) {
-//	set_speed(3, speed);
-//	set_speed(4, speed);
-//	set_speed(1, -speed);
-//	set_speed(2, -speed);
-
-	uint32_t start_time = HAL_GetTick();
-	uint32_t last_time = start_time;
-	const float control_interval = INTERVAL; // Control loop interval in milliseconds
-
-	while (1)
-	{
-		uint32_t current_time = HAL_GetTick();
-		float elapsed_time = current_time - last_time;
-		if (current_time - start_time >= ms) {
-			car_brake();
-			return;
-		}
-		if (elapsed_time >= control_interval)
-		{
-			last_time = current_time;
-
-			float yaw = get_yaw();
-
-			// 2. Compute PID output
-			float dt = control_interval / 1000.0f; // Convert ms to seconds
-			stabilization_yaw = PID_Update(&pid_yaw, desired_yaw, yaw, dt);
-
-			// 3. Execute movement command with stabilization
-			// Example: Move forward at speed 50
-			// Base speed commands
-			int32_t base_speed_front_left = speed;
-			int32_t base_speed_front_right = -speed;
-			int32_t base_speed_rear_left = -speed;
-			int32_t base_speed_rear_right = speed;
-
-			// Apply yaw stabilization adjustments
-			base_speed_front_left += stabilization_yaw;
-			base_speed_rear_left -= stabilization_yaw;
-			base_speed_front_right -= stabilization_yaw;
-			base_speed_rear_right += stabilization_yaw;
-
-			// Limit speeds to [MIN_SPEED, MAX_SPEED]
-			base_speed_front_left = (base_speed_front_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_left < MIN_SPEED) ? MIN_SPEED : base_speed_front_left);
-			base_speed_front_right = (base_speed_front_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_front_right < MIN_SPEED) ? MIN_SPEED : base_speed_front_right);
-			base_speed_rear_left = (base_speed_rear_left > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_left < MIN_SPEED) ? MIN_SPEED : base_speed_rear_left);
-			base_speed_rear_right = (base_speed_rear_right > MAX_SPEED) ? MAX_SPEED : ((base_speed_rear_right < MIN_SPEED) ? MIN_SPEED : base_speed_rear_right);
-
-			// Set motor speeds
-			set_speed(1, base_speed_rear_left);    // Left Rear
-			set_speed(2, base_speed_front_right);  // Right Front
-			set_speed(3, base_speed_front_left);   // Left Front
-			set_speed(4, base_speed_rear_right);   // Right Rear
-		}
-	}
+	set_speed(3, speed);
+	set_speed(4, speed);
+	set_speed(1, -speed);
+	set_speed(2, -speed);
+	HAL_Delay(ms);
+	car_brake();
 }
 
 void car_move_left(int32_t speed, uint32_t ms) {
-//	set_speed(3, -speed);
-//	set_speed(4, -speed);
-//	set_speed(1, speed);
-//	set_speed(2, speed);
-	car_move_right(-speed, ms);
+	set_speed(3, -speed);
+	set_speed(4, -speed);
+	set_speed(1, speed);
+	set_speed(2, speed);
+	HAL_Delay(ms);
+	car_brake();
 }
 
 
@@ -1100,7 +1059,7 @@ void SearchRun(void) {
 					{
 						if(IR_R_GROUND_BLACK && IR_M_GROUND_BLACK)
 							car_brake();
-							break;
+							break;;
 					}
             default: break;
         }

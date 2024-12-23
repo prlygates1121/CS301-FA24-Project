@@ -115,7 +115,14 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
 
+
+
   car_brake();
+
+  while (1) {
+		SearchRun();
+
+  }
 
   /*探测*/
   uint8_t ret;
@@ -144,12 +151,12 @@ int main(void)
     }
 
     //HAL_Delay(20000);
-    desired_yaw = get_yaw();
+//    desired_yaw = get_yaw();
   /////////////////////////////////////////////////////////
     //car_run_up_one();
-    detection_test(3, 0, 0, 3);
+//    detection_test(3, 0, 0, 3);
   //TURN_ON_LED1;
-  while(1){continue;}
+//  while(1){continue;}
   /////////////////////////////////////////////////////////
 
   TURN_OFF_BUZZER;
@@ -196,7 +203,7 @@ int main(void)
   }
 
   HAL_Delay(20000);
-  desired_yaw = get_yaw();
+  desired_yaw = get_yaw() - 5;
 
 
   NRF24L01_RX_Mode();
@@ -221,6 +228,21 @@ while (1)
 		nrf_send(nrf_tx_buf, 0);
 		current_millis = HAL_GetTick();
 	}
+
+//	if (!key1 && KEY1_PRESSED) {
+//		key1 = 1;
+//		while (1) {
+//			if (!KEY1_PRESSED) {
+//				key1 = 0;
+//			}
+//			if (!key1 && KEY1_PRESSED) {
+//				break;
+//			}
+//			SearchRun();
+//		}
+//		key1 = 0;
+//	}
+
 
     /* USER CODE END WHILE */
 
