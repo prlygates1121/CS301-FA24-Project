@@ -82,6 +82,7 @@ uint8_t get_obstacle = 0;
 uint8_t get_clearing = 0;
 uint8_t get_main = 0;
 uint8_t get_main_back = 0;
+int trace_flag = 0;
 
 extern const unsigned char left_red[3120];
 extern const unsigned char obstacle[3420];

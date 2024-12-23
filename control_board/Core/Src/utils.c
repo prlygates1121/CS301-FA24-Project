@@ -108,6 +108,8 @@ void draw_control_panel() {
 		draw_stop_black();
 		draw_left_spin_black();
 		draw_right_spin_black();
+		draw_tracing();
+		draw_hand();
 	}else if (mode == 1){
 		lcd_fill(0, 0, 240, 288, WHITE);
 		control = 0;
@@ -182,6 +184,15 @@ void draw_right_spin_black(){
 
 void draw_right_spin_red(){
 	LCD_ShowPicture(165, 50, 39, 40, right_red);
+}
+
+// bonus
+void draw_tracing(){
+	lcd_show_string(5, 180, 60, 24, 24, "TRACE", BLACK);
+}
+
+void draw_hand(){
+	lcd_show_string(180, 180, 47, 24, 24, "HAND", BLACK);
 }
 
 void lcd_grid(){
@@ -264,6 +275,22 @@ void mode_control(uint16_t x_touch, uint16_t y_touch, int touched){
 	uint8_t command[32] = {0};
 	if(touched){
 		//screen being touched
+		//trace  trace_flag
+		if (x_touch > 0 && x_touch < 80 && y_touch > 180 && y_touch < 235){
+			trace_flag = 100;
+			command[0] = trace_flag;
+			nrf_send(command, 0);
+			sprintf(DATA_TO_SEND, "trace\n");
+			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+		}
+		//hand
+		if (x_touch > 160 && x_touch < 240 && y_touch > 180 && y_touch < 235){
+			trace_flag = 101;
+			command[0] = trace_flag;
+			nrf_send(command, 0);
+			sprintf(DATA_TO_SEND, "hand\n");
+			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
+		}
 		//stop
 		  if (x_touch > 86 && x_touch < 156 && y_touch > 100 && y_touch < 170){
 			  if (arrow_status[4] == RELEASED){
@@ -609,6 +636,7 @@ void mode_auto(uint16_t x_touch, uint16_t y_touch) {
 		start_selecting = 0;
 		end_selecting = 1;
 	}else if (x_touch > 20 && x_touch < 220 && y_touch > 20 && y_touch < 220) { //按网格进行选择
+		//
 		x_index = (x_touch-20) / 50;
 		y_index = (y_touch-20) / 50;
 		grid_index = (4*y_index) + x_index;
@@ -635,9 +663,6 @@ void mode_auto(uint16_t x_touch, uint16_t y_touch) {
 		command_mode_auto[3] = end[0];
 		command_mode_auto[4] = end[1];
 		nrf_send(command_mode_auto, 0);
-//		graph[start[0]][start[1]] = 2;	// 起点默认无障碍
-//		dfs(start[0], start[1]);		// 从起点开始探测障碍
-//		go_through(start[0], start[1]);
 	}
 }
 

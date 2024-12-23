@@ -119,10 +119,11 @@ int main(void)
 
   car_brake();
 
-  while (1) {
-		SearchRun();
-
-  }
+//  while (1) {
+//
+//		SearchRun();
+//
+//  }
 
   /*探测*/
   uint8_t ret;
@@ -203,7 +204,7 @@ int main(void)
   }
 
   HAL_Delay(20000);
-  desired_yaw = get_yaw() - 5;
+  desired_yaw = get_yaw() - 10;
 
 
   NRF24L01_RX_Mode();
@@ -217,8 +218,26 @@ while (1)
   {
 	if (command_ready) {
 //		HAL_UART_Transmit(&huart1, what, 1, HAL_MAX_DELAY);
-		process_command(nrf_rx_buf);
-		command_ready = 0;
+		if (nrf_rx_buf[0] == 100){
+			command_ready = 0;
+			while (1) {
+				TURN_ON_BUZZER;
+				SearchRun();
+//				car_brake();
+//				HAL_Delay(400);
+				if (command_ready) {
+					if (nrf_rx_buf[0] == 101) {
+						HAL_Delay(500);
+						TURN_OFF_BUZZER;
+						command_ready = 0;
+						break;
+					}
+				}
+			}
+		} else {
+			process_command(nrf_rx_buf);
+			command_ready = 0;
+		}
 	}
 	if (HAL_GetTick() - current_millis >= interval_millis) {
 		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);

@@ -55,6 +55,7 @@ extern int move_signal;
 extern int control;
 extern uint32_t debounceTime;
 extern int debounceLabel;
+extern int trace_flag;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

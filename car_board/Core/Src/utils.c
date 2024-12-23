@@ -180,14 +180,14 @@ void detect(int x, int y, uint8_t *next_step) {
 			nrf_tx_buf[0] = 0;
 			nrf_tx_buf[1] = dist[0];
 			nrf_send(nrf_tx_buf, 0);
-			if (dist[0] <= 50) {
+			if (dist[0] <= 90) {
 				//有障碍
 				TURN_ON_BUZZER;
 				graph[x_d][y_d] = 1;
 //				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 38, 45, obstacle);
 				detect_command[0] = 1;
-				detect_command[1] = x_d;
-				detect_command[2] = y_d;
+				detect_command[1] = y_d;
+				detect_command[2] = x_d;
 				nrf_send(detect_command, 0);
 				obstacle_cnt++;
 				HAL_Delay(200);
@@ -197,8 +197,8 @@ void detect(int x, int y, uint8_t *next_step) {
 				graph[x_d][y_d] = 2;
 //				LCD_ShowPicture(20+(50*x_d)+2, 10+(50*y_d)+2, 39, 40, left_red);
 				detect_command[0] = 2;
-				detect_command[1] = x_d;
-				detect_command[2] = y_d;
+				detect_command[1] = y_d;
+				detect_command[2] = x_d;
 				nrf_send(detect_command, 0);
 				clear_cnt++;
 				next_step[i] = 1;
@@ -217,9 +217,9 @@ float standard_angles[5] = {0, 90, 180, -90, -180};
 float target_angels[4] = {-90, 90, 180, 0};
 void car_spin_target(float target) {
 	// 电机动力不一样，所以速度不一样
-	set_speed(1, 50);    // Left Rear
+	set_speed(1, 70);    // Left Rear
 	set_speed(2, 60);  // Right Front
-	set_speed(3, 60);   // Left Front
+	set_speed(3, 50);   // Left Front
 	set_speed(4, 50);   // Right Rear
 	while(1) {
 		float now_angle = get_yaw();
@@ -282,8 +282,8 @@ uint8_t dfs(int x, int y) {
 			sprintf(DATA_TO_SEND, "DFS dives deeper: (%d, %d)\n", x + step[i][0], y + step[i][1]);
 			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 			dfs_command[0] = 3;
-			dfs_command[1] = point[0];
-			dfs_command[2] = point[1];
+			dfs_command[1] = point[1];
+			dfs_command[2] = point[0];
 			nrf_send(dfs_command, 0);
 			if (dfs(point[0], point[1])) {
 				to_end = 1;
@@ -317,8 +317,8 @@ uint8_t dfs(int x, int y) {
 			sprintf(DATA_TO_SEND, "DFS floats up: (%d, %d)\n", x, y);
 			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 			dfs_command[0] = 3;
-			dfs_command[1] = point[0];
-			dfs_command[2] = point[1];
+			dfs_command[1] = point[1];
+			dfs_command[2] = point[0];
 			nrf_send(dfs_command, 0);
 		}
 	}
@@ -336,8 +336,8 @@ uint8_t dfs(int x, int y) {
 				for (int y_show=0; y_show<4; y_show++) {
 					if (graph[x_show][y_show] == 1) {
 						dfs_command[0] = 1;
-						dfs_command[1] = x_show;
-						dfs_command[2] = y_show;
+						dfs_command[1] = y_show;
+						dfs_command[2] = x_show;
 						nrf_send(dfs_command, 0);
 						HAL_Delay(500);
 					}
@@ -364,8 +364,8 @@ uint8_t dfs(int x, int y) {
 					if (graph[x_show][y_show] == 1) {
 //						LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
 						dfs_command[0] = 1;
-						dfs_command[1] = x_show;
-						dfs_command[2] = y_show;
+						dfs_command[1] = y_show;
+						dfs_command[2] = x_show;
 						nrf_send(dfs_command, 0);
 						HAL_Delay(500);
 					}
@@ -431,8 +431,8 @@ void go_through(int x, int y) {
 			sprintf(DATA_TO_SEND, "On my way to the end: (%d, %d)\n", x_d, y_d);
 			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
 			go_command[0] = 4;
-			go_command[1] = point[0];
-			go_command[2] = point[1];
+			go_command[1] = point[1];
+			go_command[2] = point[0];
 			nrf_send(go_command, 0);
 			//如果已经到了终点
 			if (x_d == end[0] && y_d == end[1]) {
@@ -456,8 +456,8 @@ void go_through(int x, int y) {
 						if (graph[x_show][y_show] == 1) {
 //							LCD_ShowPicture(20+(50*x_show)+2, 10+(50*y_show)+2, 38, 45, obstacle);
 							go_command[0] = 1;
-							go_command[1] = x_show;
-							go_command[2] = y_show;
+							go_command[1] = y_show;
+							go_command[2] = x_show;
 							nrf_send(go_command, 0);
 							HAL_Delay(500);
 						}
@@ -520,12 +520,12 @@ void process_command(uint8_t command[]) {
 			car_turn_around_left();
 			break;
 		case DETECTION_MODE:
-			start[0] = command[1];
-			start[1] = command[2];
-			end[0] = command[3];
-			end[1] = command[4];
-			point[0] = start[0];
-			point[1] = start[1];
+			start[0] = command[2];
+			start[1] = command[1];
+			end[0] = command[4];
+			end[1] = command[3];
+			point[0] = command[2];
+			point[1] = command[1];
 			graph[start[0]][start[1]] = 2;
 			sprintf(DATA_TO_SEND, "Starting at (%d, %d) to the end (%d, %d)\n", start[0], start[1], end[0], end[1]);
 			HAL_UART_Transmit(&huart1, (uint8_t*)DATA_TO_SEND, strlen(DATA_TO_SEND), HAL_MAX_DELAY);
@@ -948,54 +948,27 @@ char ctrl_comm; // 本次的指令
 //#define IR_M_GROUND_WHITE (HAL_GPIO_ReadPin(IR_GND_M_GPIO_Port, IR_GND_M_Pin) == GPIO_PIN_RESET)
 //#define IR_M_GROUND_BLACK (HAL_GPIO_ReadPin(IR_GND_M_GPIO_Port, IR_GND_M_Pin) == GPIO_PIN_SET)
 
+
 void SearchRun(void) {
-    if(IR_R_GROUND_WHITE && IR_L_GROUND_WHITE && IR_M_GROUND_BLACK){
+    if((IR_R_GROUND_WHITE == IR_L_GROUND_WHITE) && IR_M_GROUND_BLACK){
     	//up
     	ctrl_comm = COMM_UP;
-    	//3
-//    	TURN_ON_LED1;
-//    	TURN_ON_LED2;
     }
     else if (IR_L_GROUND_BLACK && IR_R_GROUND_WHITE){
     	// left
     	ctrl_comm = COMM_LEFT;
-    	//1
-//    	TURN_OFF_LED1;
-//    	TURN_ON_LED2;
     }
     else if (IR_R_GROUND_BLACK && IR_L_GROUND_WHITE){
     	//right
-    	//2
     	ctrl_comm = COMM_RIGHT;
-//    	TURN_ON_LED1;
-//    	TURN_OFF_LED2;
     }else if (IR_M_GROUND_WHITE && IR_L_GROUND_WHITE && IR_R_GROUND_WHITE){
     	//down
-    	if (ctrl_comm_last == COMM_LEFT){
-    		//左转
-    		//1
-    		TURN_OFF_LED1;
-    		TURN_ON_LED2;
-    		ctrl_comm = TURN_LEFT;
-    	}else if (ctrl_comm_last == COMM_RIGHT){
-    		//右转
-    		//2
-    		TURN_ON_LED1;
-    		TURN_OFF_LED2;
-    		ctrl_comm = TURN_RIGHT;
-    	}
+    	ctrl_comm = COMM_DOWN;
     }
-//    else{
-//    	//0
-//    	TURN_OFF_LED1;
-//    	TURN_OFF_LED2;
-//    	ctrl_comm = COMM_STOP;
-//    }
-
 
 //    if(ctrl_comm_last != ctrl_comm)
 //    {
-    	if (ctrl_comm != TURN_LEFT || ctrl_comm != TURN_RIGHT){
+    	if (ctrl_comm == COMM_LEFT || ctrl_comm == COMM_RIGHT){
     		ctrl_comm_last = ctrl_comm;
     	}
         switch(ctrl_comm)
@@ -1007,10 +980,21 @@ void SearchRun(void) {
 				set_speed(4, 90);
                 break;
             case COMM_DOWN:
-            	set_speed(1, 60);
-				set_speed(2, -60);
-				set_speed(3, 60);
-				set_speed(4, -60);
+            	//01
+            	TURN_OFF_LED1;
+            	TURN_ON_LED2;
+            	car_brake();
+//            	HAL_Delay(200);
+            	set_speed(1, 50);
+				set_speed(2, -50);
+				set_speed(3, 50);
+				set_speed(4, -50);
+				while(1){
+					if(IR_L_GROUND_BLACK || IR_R_GROUND_BLACK || IR_M_GROUND_BLACK){
+						car_brake();
+						break;
+					}
+				}
             	break;
             case COMM_RIGHT:
                 set_speed(1, -70);
@@ -1019,6 +1003,7 @@ void SearchRun(void) {
                 set_speed(4, -50);
             	while(1)
 				{
+            		HAL_Delay(100);
 					if(IR_R_GROUND_WHITE)
 						car_brake();
 						break;
@@ -1031,6 +1016,7 @@ void SearchRun(void) {
                 set_speed(4, 70);
             	while(1)
 				{
+            		HAL_Delay(100);
 					if(IR_L_GROUND_WHITE)
 						car_brake();
 						break;
@@ -1039,29 +1025,8 @@ void SearchRun(void) {
             case COMM_STOP:
             	car_brake();
             	break;
-            case TURN_LEFT:
-            	car_brake();
-				 HAL_Delay(500);
-				 car_spin_left(55);
-//				 delay_tms(100);
-				 while(1)
-					{
-						if(IR_R_GROUND_BLACK && IR_M_GROUND_BLACK)
-							car_brake();
-							break;
-					}
-            case TURN_RIGHT:
-            	car_brake();
-				 HAL_Delay(500);
-				 car_spin_right(55);
-//				 delay_tms(100);
-				 while(1)
-					{
-						if(IR_R_GROUND_BLACK && IR_M_GROUND_BLACK)
-							car_brake();
-							break;;
-					}
             default: break;
         }
 //    }
 }
+
