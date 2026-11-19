@@ -1,0 +1,30 @@
+# STM32CubeIDE / Eclipse build outputs
+Debug/
+Release/
+build/
+.metadata/
+*.launch
+
+# Compiled binaries & intermediate artifacts
+*.o
+*.d
+*.su
+*.cyclo
+*.elf
+*.bin
+*.hex
+*.list
+*.map
+*.srec
+
+# Editors & IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
